@@ -15,6 +15,9 @@ package com.im.secure;
  */
 import org.apache.commons.codec.binary.Base64;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.security.Key;
 import java.security.KeyFactory;
@@ -35,6 +38,10 @@ import javax.crypto.Cipher;
 
 public class RSAUtil {
     public static final String CHAR_ENCODING = "UTF-8";
+
+    private static final String PRIVATE_KEY = "/pkcs8_rsa_private_key.pem";
+
+    private static final String PUBLIC_KEY = "/rsa_public_key.pem";
     public static final String RSA_ALGORITHM = "RSA/ECB/PKCS1Padding";
      /** 指定key的大小 2048位 */
     private static int KEYSIZE = 2048;
@@ -199,6 +206,63 @@ public class RSAUtil {
 
         return false;
     }
+    /**
+     * 从文件中输入流中加载公钥
+     *
+     * @param path 公钥输入流
+     * @throws Exception 加载公钥时产生的异常
+     */
+    public static String loadPublicKeyByFile(String path) throws Exception {
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(path
+                    + PUBLIC_KEY));
+            String readLine = null;
+            StringBuilder sb = new StringBuilder();
+            while ((readLine = br.readLine()) != null) {
+                if (readLine.charAt(0) == '-') {
+                    continue;
+                } else {
+                    sb.append(readLine);
+                    sb.append('\r');
+                }
+            }
+            br.close();
+            return sb.toString();
+        } catch (IOException e) {
+            throw new Exception("公钥数据流读取错误");
+        } catch (NullPointerException e) {
+            throw new Exception("公钥输入流为空");
+        }
+    }
+    /**
+     * 从文件中加载私钥
+     *
+     * @param path 私钥文件名
+     * @return 是否成功
+     * @throws Exception
+     */
+    public static String loadPrivateKeyByFile(String path) throws Exception {
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(path
+                    + PRIVATE_KEY));
+            String readLine = null;
+            StringBuilder sb = new StringBuilder();
+            while ((readLine = br.readLine()) != null) {
+                if (readLine.charAt(0) == '-') {
+                    continue;
+                } else {
+                    sb.append(readLine);
+                    sb.append('\r');
+                }
+            }
+            br.close();
+            return sb.toString();
+        } catch (IOException e) {
+            throw new Exception("私钥数据读取错误");
+        } catch (NullPointerException e) {
+            throw new Exception("私钥输入流为空");
+        }
+    }
     // 简单测试例子
     public static void main(String[] args) throws Exception {
         {
@@ -225,8 +289,9 @@ public class RSAUtil {
                     "sV+ybLzkg+Jus7ewoJSUr+M9fskGvmSXaQs9Hm/9KuOQgCFm2Z9EtwXu69/hlNkf" +
                     "0oNidteioTCGps0D5+A9CRv21S4ivuw6QJ5EE9UAr2O2TC8zVlFwtGffNP5gVZkB" +
                     "QwIDAQAB";
+            publicKey= loadPublicKeyByFile("c:\\dev\\test");
             String encodedData = RSAUtil.encrypt(str, publicKey);  //传入明文和公钥加密,得到密文
-            System.out.println("密文：\r\n" + encodedData);
+            System.out.println("密文：\r\n" + encodedData+"||||||||||||");
             //私钥
             privateKey = "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC2V2If/tI2qU0H" +
                     "eNso4cwIRYNakm1YlRyQ+qJ8Vf0ZUfS3lDP6z+K8KvRx4mE5zPRU1xVZ8t1hAkhu" +
@@ -254,6 +319,9 @@ public class RSAUtil {
                     "a53oAXvwFxCbIhBnMVD5BR/YAe7CAGZVMvohrpZ+AiaaU/9apMkvMF/fdMWWidOC" +
                     "L0UyojHWy+sDy6Ph3fJh+aS8jE62bmCsl0IRzcWxrEjObkzFIHHedd0EzeFNNs9S" +
                     "1gOc1ovEomiZn4G6WSLaBmIe";
+            System.out.println("--------prikey:load-------");
+            String prikeystr= loadPrivateKeyByFile("c:\\dev\\test");
+            System.out.println("--------prikey:"+prikeystr);
             String decodedData = RSAUtil.decrypt(encodedData, privateKey); //传入密文和私钥,得到明文
             System.out.println("解密后文字: \r\n" + decodedData);
         }
