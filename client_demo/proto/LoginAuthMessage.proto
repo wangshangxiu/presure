@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+option java_package = "com.leimans.imsdk.message";
+option java_outer_classname = "HandleShakeMessageProtobuf";
+
+// 参考资料：https://www.cnblogs.com/langqi250/p/7283702.html
+
+
+
+/**
+ * aes 数据对应的数据结构
+ */
+message AESData{
+    string token = 1; // 用户token
+    int32 clientTime = 2; // 时间戳，秒，4个字节
+    string devId = 3; // 设备id
+    int64 loginSeq = 4; // 登录序列号，每次自增，8个字节
+    string other=5;    // 其余数据待定
+}
+/**
+ *  rsa数据对应的数据结构
+ */
+message RsaData{
+    int32 userId = 1; // 用户id,4个字节
+    bytes ecdhPubKey = 2; // 客户端临时公钥,32字节
+    string aesKey = 3; // 每次请求生成的临时aes的密钥
+}
+
+/**
+ * 数据包的body,由服务端返回
+ */
+message LoginRsp{
+        int32 code=1;//应答业务码
+        string codeMsg=2;//错误描述
+        bytes ecdhServerPubKey=3;//服务端公钥，用于解密
+        string sessionKey=4;//后续消息加密key，这个是aes加密后的 ；用临时公钥协商的密钥加密的值
+        string sessionID=5;//会话id
+        int32  startSeq=6;//客户端后续消息的起始seq
+       int32 serverTime = 7; // 时间戳，秒，4个字节
+       string other=8;    // 其他业务数据
+}
