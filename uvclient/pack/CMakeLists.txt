@@ -1,0 +1,13 @@
+cmake_minimum_required(VERSION 2.6)
+PROJECT(pack)
+
+AUX_SOURCE_DIRECTORY(${CMAKE_CURRENT_SOURCE_DIR} SRC_LIST)
+ADD_DEFINITIONS( -g -W -Wall -Wno-unused-parameter -Wno-deprecated -D_REENTRANT 
+-D_FILE_OFFSET_BITS=64 -DAC_HAS_INFO -DAC_HAS_WARNING -DAC_HAS_ERROR 
+-DAC_HAS_CRITICAL -DTIXML_USE_STL -DAC_HAS_DEBUG -DLINUX_DAEMON -std=c++11)
+
+INCLUDE_DIRECTORIES(./ ../ ../pb ../encrypt ../buffer ../logger ../json ../include ../include/libuv) 
+
+ADD_LIBRARY(pack STATIC ${SRC_LIST}) 
+
+#TARGET_LINK_LIBRARIES(pb pthread dl)
