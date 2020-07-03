@@ -26,7 +26,6 @@
 #include "CJsonObject.hpp"
 #include "comm.h"
 
-int autoSeq = 0;                                        //请求seq
 std::vector<UserInfo> listUserInfo;                     //模拟用户列表
 std::list<uv_tcp_t*> socketList;                         //连接套接字的set
 std::map<uv_tcp_t*, uv_connect_t*> g_mapSocketConn;     //socket映射连接，用于回收连接的内存
@@ -214,7 +213,7 @@ void uv_async_call(uv_async_t* handle)
 }
 
 //对环形缓冲进行业务包分析
-void OnParsePack(const uv_stream_t* stream)
+void on_parse_pack(const uv_stream_t* stream)
 {
     if(stream)
     {
@@ -328,7 +327,7 @@ void echo_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
             else
             {
                 pBuf->Write(buf->base, nread);//从缓socket实际拿回来的数据长度为nread
-                OnParsePack(stream);//在这个函数里分析服务器下发的数据
+                on_parse_pack(stream);//在这个函数里分析服务器下发的数据
             }
         }
         LOG4_INFO("data in CircleBuffer<char> pBuf , len:%d", pBuf->GetLength());
@@ -558,11 +557,7 @@ int main(int argc, char* argv[])
     uv_timer_t*  msgTimer= new uv_timer_t; 
     msgTimer->data = &socketList;
     uv_timer_init(uv_default_loop(), msgTimer);
-#if 0
-    uv_timer_t*  heatBeatTimer= new uv_timer_t; 
-    heatBeatTimer->data = &socketList;
-    uv_timer_init(uv_default_loop(), heatBeatTimer);
-#endif 
+
     //启动业务线程
     uv_async_t* async = new uv_async_t;
     uv_async_init(uv_default_loop(), async, uv_async_call);//用于异步通知
@@ -582,9 +577,6 @@ int main(int argc, char* argv[])
     //int uv_timer_start(uv_timer_t* handle, uv_timer_cb cb, uint64_t timeout, uint64_t repeat);
     uv_timer_start(creatConnTimer, uv_creatconn_timer_callback, 0, 1*1000);//next loop 执行第一次, 并周期为1s,创建连接定时器
     // uv_timer_start(msgTimer, uv_msg_timer_callback, 1*1000, 1*1000);//1s后启动, 并周期为1s,消息发送定时器
-#if 0
-    uv_timer_start(heatBeatTimer, uv_heatBeat_timer_callback, 3.5*60*1000, 3.5*60*1000);//next loop 执行第一次，周期3.5min,心跳发送定时器
-#endif 
     return uv_run(uv_default_loop(), UV_RUN_DEFAULT);
 }
 

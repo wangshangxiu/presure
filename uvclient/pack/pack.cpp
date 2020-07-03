@@ -1,7 +1,6 @@
 #include <unistd.h>
 #include "encrypt_crypto.h"
 #include "pack.h"
-extern int autoSeq;      
 extern std::map<uv_tcp_t*, uv_connect_t*> g_mapSocketConn;
 const unsigned char g_Aes_ReserveBit  = 0x04;          ///< 采用256位aes
 Pack::Pack(RingBuffer* recvRb, void *recvMem, RingBuffer* sendRb, void* sendMem, uv_async_t* uvAsyn, int index) :
