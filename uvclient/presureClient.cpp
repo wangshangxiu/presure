@@ -362,6 +362,7 @@ void on_connect(uv_connect_t* req, int status)
     }
 }
 
+//int uv_timer_start(uv_timer_t* handle, uv_timer_cb cb, uint64_t timeout, uint64_t repeat);
 //void (*uv_timer_cb)(uv_timer_t* handle);
 void uv_creatconn_timer_callback(uv_timer_t* handle){
     LOG4_INFO("-------uv_creatconn_timer_callback-------");
@@ -549,34 +550,39 @@ int main(int argc, char* argv[])
     }
     LOG4_DEBUG("listUserInfo size(%d)", listUserInfo.size());
 
-    //初始化定时器
-    uv_timer_t*  creatConnTimer= new uv_timer_t; 
-    creatConnTimer->data = &listUserInfo;//挂接用户信息列表
-    uv_timer_init(uv_default_loop(), creatConnTimer);
-
-    uv_timer_t*  msgTimer= new uv_timer_t; 
-    msgTimer->data = &socketList;
-    uv_timer_init(uv_default_loop(), msgTimer);
-
-    //启动业务线程
+    //启动多线程结构
     uv_async_t* async = new uv_async_t;
-    uv_async_init(uv_default_loop(), async, uv_async_call);//用于异步通知
-    for(int i = 0; i < TASK_THREAD_NUM; i++)
+    uv_async_init(uv_default_loop(), async, uv_async_call);//用于woker线程异步通知主线程
+    int worker_thread_num = 1; 
+    if(!cfg.Get("worker_thread_num", worker_thread_num))
     {
-        //初始化多个发送缓冲，和业务线程数一致，目的是为了业务线程和socket线程的竞争安全
+        worker_thread_num = 1;
+    }
+    for(int i = 0; i < worker_thread_num; i++)
+    {
         p_send_mem[i] = malloc(RB_SIZE);
         rb_send[i] = new RingBuffer(RB_SIZE, false, false);
-        //开多线程处理rb_recv里的ImPack 
         ImMessagePack* objTestImMsg = new ImMessagePack(&rb_recv, p_recv_mem, rb_send[i], p_send_mem[i], async, i);
         std::thread th(&Pack::StartThread, objTestImMsg);
-        // std::thread th(Pack::StartThread, new ImMessagePack(&rb_recv, p_recv_mem, rb_send[i], p_send_mem[i], async, i));//这个语法编译不过
         th.detach();
     }
 
-    //开启创建连接的定时器
-    //int uv_timer_start(uv_timer_t* handle, uv_timer_cb cb, uint64_t timeout, uint64_t repeat);
-    uv_timer_start(creatConnTimer, uv_creatconn_timer_callback, 0, 1*1000);//next loop 执行第一次, 并周期为1s,创建连接定时器
+    //创建连接定时器
+    int perio = 1;
+    if(!cfg.Get("create_conn_timer_perio", perio))
+    {
+        perio = 1;
+    }
+    uv_timer_t*  creatConnTimer= new uv_timer_t; 
+    creatConnTimer->data = &listUserInfo;//挂接用户信息列表
+    uv_timer_init(uv_default_loop(), creatConnTimer);
+    uv_timer_start(creatConnTimer, uv_creatconn_timer_callback, 0, perio*1000);//next loop 执行第一次, 并周期为perio秒
+
+    // uv_timer_t*  msgTimer= new uv_timer_t; 
+    // msgTimer->data = &socketList;
+    // uv_timer_init(uv_default_loop(), msgTimer);
     // uv_timer_start(msgTimer, uv_msg_timer_callback, 1*1000, 1*1000);//1s后启动, 并周期为1s,消息发送定时器
+
     return uv_run(uv_default_loop(), UV_RUN_DEFAULT);
 }
 
