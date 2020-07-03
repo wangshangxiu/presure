@@ -26,6 +26,7 @@
 #include "CJsonObject.hpp"
 #include "comm.h"
 
+util::CJsonObject g_cfg;
 std::vector<UserInfo> listUserInfo;                     //模拟用户列表
 std::list<uv_tcp_t*> socketList;                         //连接套接字的set
 std::map<uv_tcp_t*, uv_connect_t*> g_mapSocketConn;     //socket映射连接，用于回收连接的内存
@@ -368,7 +369,13 @@ void uv_creatconn_timer_callback(uv_timer_t* handle){
     LOG4_INFO("-------uv_creatconn_timer_callback-------");
     static int userInfoListCounter = 0;
     std::vector<UserInfo>& listUserInfo = *(std::vector<UserInfo>*)handle->data;
-    for(int i = 0;  userInfoListCounter < (int)listUserInfo.size() && i < CONNECTS_BACTH_PERIO  ; i++)
+    
+    int batch = CONNECTS_BACTH_PERIO;
+    if(!g_cfg.Get("create_conn_nums_pertime", batch))
+    {
+        batch = CONNECTS_BACTH_PERIO;
+    }
+    for(int i = 0;  userInfoListCounter < (int)listUserInfo.size() && i < batch ; i++)
     {
         uv_tcp_t* socket = (uv_tcp_t*)malloc(sizeof(uv_tcp_t));
         uv_tcp_init(uv_default_loop(), socket);
@@ -521,15 +528,14 @@ int main(int argc, char* argv[])
     dstPort = std::atoi(argv[2]);
 
     //加载配置文件
-    util::CJsonObject cfg;
-    if(!LoadConfig(cfg, argv[3]))
+    if(!LoadConfig(g_cfg, argv[3]))
     {
         printf("Init failed, Load config error\n");
         return 0;
     }
 
     //初始化日志打印库
-    if(!Logger::GetInstance()->InitLogger(cfg))
+    if(!Logger::GetInstance()->InitLogger(g_cfg))
     {
         printf("Init logger failed\n");
         return 0;
@@ -538,8 +544,8 @@ int main(int argc, char* argv[])
     //读取用户数据文件
     std::string strSampleDataPath;
     std::string strSampleDataSize;
-    cfg.Get("user_data_path", strSampleDataPath);
-    cfg.Get("sample_data_size", strSampleDataSize);
+    g_cfg.Get("user_data_path", strSampleDataPath);
+    g_cfg.Get("sample_data_size", strSampleDataSize);
     strSampleDataPath += "id_test_";
     strSampleDataPath += strSampleDataSize;
     strSampleDataPath +=".json";
@@ -554,7 +560,7 @@ int main(int argc, char* argv[])
     uv_async_t* async = new uv_async_t;
     uv_async_init(uv_default_loop(), async, uv_async_call);//用于woker线程异步通知主线程
     int worker_thread_num = 1; 
-    if(!cfg.Get("worker_thread_num", worker_thread_num))
+    if(!g_cfg.Get("worker_thread_num", worker_thread_num))
     {
         worker_thread_num = 1;
     }
@@ -569,7 +575,7 @@ int main(int argc, char* argv[])
 
     //创建连接定时器
     int perio = 1;
-    if(!cfg.Get("create_conn_timer_perio", perio))
+    if(!g_cfg.Get("create_conn_timer_perio", perio))
     {
         perio = 1;
     }
