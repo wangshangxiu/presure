@@ -8,6 +8,7 @@
 #include <fstream>
 #include <thread>
 #include <unistd.h>
+#include <time.h>
 #include <uv.h>
 
 #include "msg.pb.h"
@@ -36,6 +37,7 @@ void *p_send_mem[TASK_THREAD_NUM];                      //writer:业务线程, r
 RingBuffer *rb_send[TASK_THREAD_NUM];                   //(RB_SIZE, false, false),多线程处理业务后要发包入缓冲，通知socket线程发送,有几个业务线程就有几个这样的rb
 const std::string& rsaKeyPath = "./conf/rsakey/public_key.pem";
 RSA* rsaPublicKey = readRsaPublicKeyFromFile(const_cast<char*>(rsaKeyPath.c_str())); 
+std::vector<std::string>  dstIpList;
 std::string dstIp;
 int dstPort = 0;
 
@@ -383,7 +385,9 @@ void uv_creatconn_timer_callback(uv_timer_t* handle){
         connect->handle = (uv_stream_t*)socket;
         connect->data = &listUserInfo[userInfoListCounter++];//为连接绑定一个用户
         struct sockaddr_in dest;
-        uv_ip4_addr(dstIp.c_str(), dstPort, &dest);
+        int index = rand()%dstIpList.size();
+        // uv_ip4_addr(dstIp.c_str(), dstPort, &dest);
+        uv_ip4_addr(dstIpList[index].c_str(), dstPort, &dest);
         LOG4_DEBUG("user(%ld) devid(%s) token(%s) start connect ...",
             listUserInfo[userInfoListCounter].userId, listUserInfo[userInfoListCounter].devId.c_str(), listUserInfo[userInfoListCounter].authToken.c_str());
         uv_tcp_connect(connect, socket, (const struct sockaddr*)&dest, on_connect);
@@ -427,7 +431,7 @@ void uv_msg_timer_callback(uv_timer_t* handle)
         }
     }
 }
-
+#if 0
 void uv_heatBeat_timer_callback(uv_timer_t* handle)
 {
     LOG4_INFO("---------uv_heatBeat_timer_callback-------");
@@ -464,7 +468,7 @@ void uv_heatBeat_timer_callback(uv_timer_t* handle)
         }
     }
 }
-
+#endif
 bool LoadConfig(util::CJsonObject& oConf, const char* strConfFile)
 {
     std::ifstream fin(strConfFile);
@@ -517,6 +521,29 @@ bool LoadUserInfoFromFile(std::vector<UserInfo>& userInfo, const std::string& st
     return true;
 }
 
+void StringSplit(const std::string& strSrc, std::vector<std::string>& vec, char c= ':')
+{
+	if (strSrc.size() > 0)
+	{
+		int iPosBegin = 0;
+		int iPosEnd = 0;
+		for (;;)
+		{
+			iPosEnd = strSrc.find(c, iPosBegin);
+			if (iPosEnd > 0)
+			{
+				vec.push_back(strSrc.substr(iPosBegin, iPosEnd - iPosBegin));
+			}
+			else
+			{
+                vec.push_back(strSrc.substr(iPosBegin, strSrc.size() - iPosBegin));
+				break;
+			}
+			iPosBegin = iPosEnd + 1;
+		}
+	}
+}
+
 int main(int argc, char* argv[])
 {
     if(argc < 3) 
@@ -524,9 +551,15 @@ int main(int argc, char* argv[])
         printf("Usage: %s hostAddress port  cfgfile\n", argv[0]);
         return 0;
     }
-    dstIp.assign(argv[1]);
+    // dstIp.assign(argv[1]);
+    StringSplit(argv[1], dstIpList);
+    if(dstIpList.size() == 0 )
+    {
+        printf("ip list error , ips = %s\n", argv[1]);
+        return 0;
+    }
     dstPort = std::atoi(argv[2]);
-
+    srand(time(nullptr));
     //加载配置文件
     if(!LoadConfig(g_cfg, argv[3]))
     {
