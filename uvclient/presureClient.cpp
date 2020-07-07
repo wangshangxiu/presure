@@ -431,44 +431,13 @@ void uv_msg_timer_callback(uv_timer_t* handle)
         }
     }
 }
-#if 0
-void uv_heatBeat_timer_callback(uv_timer_t* handle)
-{
-    LOG4_INFO("---------uv_heatBeat_timer_callback-------");
-    std::list<uv_tcp_t*>& pSocketList = *(std::list<uv_tcp_t*>*)handle->data;
-    if(pSocketList.size() > 0)
-    {
-        LOG4_INFO("uv_heatBeat_timer_callback() pSocketList = %d", pSocketList.size());
-        for(const auto & stream:pSocketList)
-        {
-            const auto& iter = g_mapSocketConn.find((uv_tcp_t*)stream);
-            if(iter != g_mapSocketConn.end())
-            {
-                uv_connect_t* conn = (uv_connect_t*)iter->second;
-                if(conn)
-                {
-                    UserInfo* pUserInfo = (UserInfo*)conn->data;
-                    if(pUserInfo)
-                    {
-                        tagAppMsgHead head;
-                        head.cmd = 1101;
-                        head.seq = pUserInfo->seq++;
-                        head.len = htonl(sizeof(tagAppMsgHead));
-                        head.cmd = htonl(head.cmd);
-                        head.seq = htonl(head.seq);
 
-                        uv_buf_t buf;
-                        buf.base = (char*)&head;
-                        buf.len = sizeof(tagAppMsgHead); 
-                        uv_write_t *wReq = new uv_write_t;
-                        uv_write(wReq, (uv_stream_t*)stream, &buf, 1, write_cb);
-                    }
-                }
-            }
-        }
-    }
+void uv_loginTask_statistics_timer_callback(uv_timer_t* handle)
+{
+    LOG4_INFO("---------uv_loginTask_statistics_timer_callback-------");
+    std::vector<UserInfo>& listUserInfo = *(std::vector<UserInfo>*)handle->data;
 }
-#endif
+
 bool LoadConfig(util::CJsonObject& oConf, const char* strConfFile)
 {
     std::ifstream fin(strConfFile);
@@ -616,6 +585,11 @@ int main(int argc, char* argv[])
     creatConnTimer->data = &listUserInfo;//挂接用户信息列表
     uv_timer_init(uv_default_loop(), creatConnTimer);
     uv_timer_start(creatConnTimer, uv_creatconn_timer_callback, 0, perio*1000);//next loop 执行第一次, 并周期为perio秒
+
+    uv_timer_t*  loginTaskStatisticsTimer= new uv_timer_t; 
+    loginTaskStatisticsTimer->data = &listUserInfo;//挂接用户信息列表
+    uv_timer_init(uv_default_loop(), loginTaskStatisticsTimer);
+    uv_timer_start(loginTaskStatisticsTimer, uv_loginTask_statistics_timer_callback, perio*1000, perio*1000);//perio*1000 执行第一次, 并周期为perio秒
 
     // uv_timer_t*  msgTimer= new uv_timer_t; 
     // msgTimer->data = &socketList;

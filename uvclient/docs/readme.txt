@@ -29,7 +29,7 @@ http://blog.chinaunix.net/uid-30512847-id-5775284.html
 
 --------运行工具--------
 在工程目录下运行程序，即可建立多连接, 并且能登录，保持在线
-[root@im2 uvclient]# ./presureClient ip port cfgfile (示例：./presureClient 192.168.11.70 27010 client.conf)
+[root@im2 uvclient]# ./presureClient iplist port cfgfile (示例：./presureClient 192.168.11.70:192.168.11.72:192.168.11.73:192.168.11.74:192.168.11.75 27010 ./conf/client.conf)
 
 
 

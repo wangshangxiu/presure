@@ -3,15 +3,15 @@
 class Event
 {
 public:
-    int ieventType = EVENT_DEFAULT;
-    void *handle = nullptr;
+    int ieventType;
+    void *handle;
 public:
     enum {
         EVENT_DEFAULT,
         EVENT_LOGIN_SUCCESSE,
         EVENT_LOGIN_FAILED,
     };
-    Event(void* p, int type );
+    Event(void* p = nullptr, int type = EVENT_DEFAULT);
     ~Event();
 };
 

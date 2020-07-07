@@ -22,9 +22,11 @@ void ImMessagePack::LoginReq(uv_connect_t* conn, MsgBody& msgBody)
 {
 
     UserInfo* pUserInfo = (UserInfo*)conn->data;
-    LOG4_TRACE("userId(%ld), devId(%s), token(%s) logining...", pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->token.c_str());
     if(pUserInfo)
     {
+        pUserInfo->loginInfo.loginTime = GetMicrosecond();//设置登录时间
+        LOG4_TRACE("userId(%ld) devId(%s) token(%s) logining at %ld ...", pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginTime);
+        printf("userId(%ld) devId(%s) token(%s) logining at %ld ...\n", pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginTime);
         im_login::Login loginReq;
         im_login::RsaData rsaData;
         pUserInfo->aesKey = GetPassword(32);//临时aeskey
@@ -77,68 +79,75 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
         LOG4_ERROR("pb parse error , msgbody(%s)", msgbody.DebugString().c_str());
         return;
     }
-    int status = ntohl(*(unsigned short*)(pack.packBuf + 14));//移动14个字节就是status
 
-    if(status == 0)//成功的情况
+    //uv_connect_t* conn = (uv_connect_t*)pack.stream;//这样强转不起效
+    uv_connect_t* conn = nullptr;
+    UserInfo* pUserInfo = nullptr;
+    const auto& iter = g_mapSocketConn.find((uv_tcp_t*)pack.stream);
+    if(iter != g_mapSocketConn.end())
     {
-        //uv_connect_t* conn = (uv_connect_t*)pack.stream;//这样强转不起效
-        uv_connect_t* conn = nullptr;
-        const auto& iter = g_mapSocketConn.find((uv_tcp_t*)pack.stream);
-        if(iter != g_mapSocketConn.end())
-        {
-            conn = (uv_connect_t*)iter->second;
-        }
+        conn = (uv_connect_t*)iter->second;
         if(conn)
         {
-            UserInfo* pUserInfo = (UserInfo*)conn->data;
-            if(pUserInfo)
-            {
-                std::string strLoginRsp;
-                LOG4_INFO("pUserInfo->aesKey = %s", pUserInfo->aesKey.c_str());
-                if(Aes256Decrypt(msgbody.body(), strLoginRsp, pUserInfo->aesKey))//aes256, key 256 bits
-                {
-                    im_login::LoginRsp loginRsp;
-                    loginRsp.ParseFromString(strLoginRsp);
-                    pUserInfo->seq = loginRsp.startseq();
-                    pUserInfo->sessionId = loginRsp.sessionid();
-                    std::string sharedKey;
-                    CacllateShareKey(loginRsp.ecdhserverpubkey(), pUserInfo->ecdhKey[1], sharedKey);
-                    if(!Aes256Decrypt(loginRsp.sessionkey(), pUserInfo->aesKey, sharedKey))
-                    {
-                        LOG4_ERROR("decrypt sessionKey error, sharedKey(%s)", sharedKey.c_str());
-                        return;
-                    }
-                    LOG4_INFO("loginRsp:(%s) userId(%lld) devId(%s) token(%s) successfully", 
-                        loginRsp.DebugString().c_str(), pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str());
-                    //登录成功后需要为当前用户开启定时器，这个动作要回到socket线程
-#if 1
-                    CustomEvent event;
-                    event.handle = pack.stream; 
-                    event.istatus = 0;
-                    event.ieventType = CustomEvent::EVENT_LOGIN_SUCCESSE;
-                    if(m_sendRb->push(&event, sizeof(event), m_sendMem) == 0)//pack放到rb_recv, 能放下则放下
-                    {
-                        LOG4_INFO("push CustomEvent of event.handle(%p) to ringbuffer, event.ieventType(%d), event.istatus(%d), rb_send(%p), p_send_mem(%p)",event.handle, event.ieventType, event.istatus ,  m_sendRb, m_sendMem);
-                    }
-                    else
-                    {
-                        return;//m_sendRb满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
-                    }
-#endif
-                }
-                else
-                {
-                    LOG4_ERROR("decrypt LoginRsp error");
-                }
-            }
-            else
-            {
-                LOG4_ERROR("there is no userInfo(%p)", pUserInfo);
-            }
+            pUserInfo = (UserInfo*)conn->data;
         }
         else
         {
             LOG4_ERROR("conn (%p) from stream(%p) is not a uv_connect_t", conn, pack.stream);
+            return;
+        }
+    }
+
+    int status = ntohl(*(unsigned short*)(pack.packBuf + 14));//移动14个字节就是status
+    pUserInfo->loginInfo.loginStatus = status;
+    if(status == 0)//成功的情况
+    {
+        if(pUserInfo)
+        {
+            std::string strLoginRsp;
+            LOG4_INFO("pUserInfo->aesKey = %s", pUserInfo->aesKey.c_str());
+            if(Aes256Decrypt(msgbody.body(), strLoginRsp, pUserInfo->aesKey))//aes256, key 256 bits
+            {
+                im_login::LoginRsp loginRsp;
+                loginRsp.ParseFromString(strLoginRsp);
+                pUserInfo->seq = loginRsp.startseq();
+                pUserInfo->sessionId = loginRsp.sessionid();
+                std::string sharedKey;
+                CacllateShareKey(loginRsp.ecdhserverpubkey(), pUserInfo->ecdhKey[1], sharedKey);
+                if(!Aes256Decrypt(loginRsp.sessionkey(), pUserInfo->aesKey, sharedKey))
+                {
+                    LOG4_ERROR("decrypt sessionKey error, sharedKey(%s)", sharedKey.c_str());
+                    return;
+                }
+                pUserInfo->loginInfo.loginRspTime = GetMicrosecond();//登录返回并处理完的时间
+                LOG4_INFO("userId(%lld) devId(%s) token(%s) loginRsp successfully at %ld", 
+                    pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime);
+                printf("userId(%lld) devId(%s) token(%s) loginRsp successfully at %ld\n", 
+                    pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime);
+                //登录成功后需要为当前用户开启心跳定时器，这个步骤要回到socket线程
+    #if 1
+                CustomEvent event;
+                event.handle = pack.stream; 
+                event.istatus = 0;
+                event.ieventType = CustomEvent::EVENT_LOGIN_SUCCESSE;
+                if(m_sendRb->push(&event, sizeof(event), m_sendMem) == 0)//pack放到rb_recv, 能放下则放下
+                {
+                    LOG4_INFO("push CustomEvent of event.handle(%p) to ringbuffer, event.ieventType(%d), event.istatus(%d), rb_send(%p), p_send_mem(%p)",event.handle, event.ieventType, event.istatus ,  m_sendRb, m_sendMem);
+                }
+                else
+                {
+                    return;//m_sendRb满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
+                }
+    #endif
+            }
+            else
+            {
+                LOG4_ERROR("decrypt LoginRsp error");
+            }
+        }
+        else
+        {
+            LOG4_ERROR("there is no userInfo(%p)", pUserInfo);
         }
     }
     else 
@@ -146,6 +155,11 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
         im_login::LoginRsp loginRsp;
         loginRsp.ParseFromString(msgbody.body());
         LOG4_ERROR("loginRsp failed: (%s)", loginRsp.DebugString().c_str());
+        pUserInfo->loginInfo.loginRspTime = GetMicrosecond();//登录返回并处理完的时间
+        LOG4_ERROR("userId(%lld) devId(%s) token(%s) loginRsp failed at %ld", 
+            pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime);
+        printf("userId(%lld) devId(%s) token(%s) loginRsp failed at %ld\n", 
+            pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime);
         switch (status)//不同情况的登录返回处理
         {
             case 0:

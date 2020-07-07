@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <stdlib.h>
 //#define RUNTIMES (256*1000)
 #define RUNTIMES (10*1000)
 //毫秒级时间戳id
@@ -83,15 +84,17 @@ int main(int argc, char* argv[])
         csvFile << "id, dev_id, token" << "\n";
     }
 #if 1
-    for(int i = 0 ; i < RUNTIMES; i++)
+    for(int i = 0 ; i < atoi(argv[1]); i++)
     {
        unsigned long long id =  GetUniqueId_MS(254, 64);
        std::string stRand = GetRandStr(32, true);
     //"4:1:im:token:userid:1275006717478846466:deviceid:5EDF8352-7BB2-4A8A-9BE4-812F1F053C2B"
        char csvBuf[128] = {0};
        snprintf(csvBuf, sizeof(csvBuf), "%ld, %s, %s", id, stRand.c_str(), stRand.c_str());
+
        char insRedisBuf[256] ={0};
        snprintf(insRedisBuf, sizeof(insRedisBuf), "set 4:1:im:token:userid:%ld:deviceid:%s %s", id, stRand.c_str(), stRand.c_str());
+       
        char set0Buf[256] ={0};
        snprintf(set0Buf, sizeof(set0Buf), "hset 1:2:im:status:userid:%ld loginseq:%s 0", id, stRand.c_str());
 

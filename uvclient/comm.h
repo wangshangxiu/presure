@@ -76,6 +76,12 @@ typedef struct
     int istatus = 0;
 }CustomEvent;
 
+typedef struct 
+{
+    long long loginTime = 0;
+    long long loginRspTime = 0;
+    int loginStatus = -1;//0成功， 非0失败，主要是和登录协议的status一致
+}LoginInfo;
 
 typedef struct {
     long long userId = 0;//db有
@@ -87,6 +93,10 @@ typedef struct {
     std::string aesKey;//开始是自己，成功换成服务器生成的
     std::string sessionId;//
     ConnInfo info;//连接信息
+    LoginInfo  loginInfo;//登录事务信息
     void *timer = nullptr;//用户心跳定时器
 }UserInfo;
+
+long long GetMicrosecond();
+
 #endif//_COMM_H
