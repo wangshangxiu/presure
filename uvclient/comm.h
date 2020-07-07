@@ -2,6 +2,7 @@
 #define _COMM_H_
 
 #include <string>
+#include <vector>
 #include "log4cplus/fileappender.h"
 #include "log4cplus/logger.h"
 #include "log4cplus/loggingmacros.h"
@@ -78,6 +79,7 @@ typedef struct
 
 typedef struct 
 {
+    long long startConnectTime = 0;
     long long loginTime = 0;
     long long loginRspTime = 0;
     int loginStatus = -1;//0成功， 非0失败，主要是和登录协议的status一致
@@ -96,6 +98,13 @@ typedef struct {
     LoginInfo  loginInfo;//登录事务信息
     void *timer = nullptr;//用户心跳定时器
 }UserInfo;
+
+typedef struct 
+{
+    std::vector<UserInfo> *vUserInfo;
+    int iBatch;//周期内发起的并发数
+    int iPerio;//周期
+}UvTimerData;
 
 long long GetMicrosecond();
 

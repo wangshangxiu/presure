@@ -122,8 +122,9 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
                 pUserInfo->loginInfo.loginRspTime = GetMicrosecond();//登录返回并处理完的时间
                 LOG4_INFO("userId(%lld) devId(%s) token(%s) loginRsp successfully at %ld", 
                     pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime);
-                printf("userId(%lld) devId(%s) token(%s) loginRsp successfully at %ld\n", 
-                    pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime);
+                long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.loginTime;
+                printf("userId(%lld) devId(%s) token(%s) loginRsp successfully at %ld, cost time %ld\n", 
+                    pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime, costTime);
                 //登录成功后需要为当前用户开启心跳定时器，这个步骤要回到socket线程
     #if 1
                 CustomEvent event;

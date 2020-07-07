@@ -370,26 +370,24 @@ void on_connect(uv_connect_t* req, int status)
 void uv_creatconn_timer_callback(uv_timer_t* handle){
     LOG4_INFO("-------uv_creatconn_timer_callback-------");
     static int userInfoListCounter = 0;
-    std::vector<UserInfo>& listUserInfo = *(std::vector<UserInfo>*)handle->data;
-    
-    int batch = CONNECTS_BACTH_PERIO;
-    if(!g_cfg.Get("create_conn_nums_pertime", batch))
-    {
-        batch = CONNECTS_BACTH_PERIO;
-    }
+    UvTimerData* pUvTimerData = (UvTimerData*)handle->data;
+    std::vector<UserInfo>& listUserInfo = *(std::vector<UserInfo>*)pUvTimerData->vUserInfo;
+    int batch = pUvTimerData->iBatch;
     for(int i = 0;  userInfoListCounter < (int)listUserInfo.size() && i < batch ; i++)
     {
         uv_tcp_t* socket = (uv_tcp_t*)malloc(sizeof(uv_tcp_t));
         uv_tcp_init(uv_default_loop(), socket);
         uv_connect_t* connect = (uv_connect_t*)malloc(sizeof(uv_connect_t));
         connect->handle = (uv_stream_t*)socket;
-        connect->data = &listUserInfo[userInfoListCounter++];//为连接绑定一个用户
+        connect->data = &listUserInfo[userInfoListCounter];//为连接绑定一个用户
         struct sockaddr_in dest;
         int index = rand()%dstIpList.size();
         // uv_ip4_addr(dstIp.c_str(), dstPort, &dest);
         uv_ip4_addr(dstIpList[index].c_str(), dstPort, &dest);
         LOG4_DEBUG("user(%ld) devid(%s) token(%s) start connect ...",
             listUserInfo[userInfoListCounter].userId, listUserInfo[userInfoListCounter].devId.c_str(), listUserInfo[userInfoListCounter].authToken.c_str());
+        listUserInfo[userInfoListCounter].loginInfo.startConnectTime = GetMicrosecond();
+        userInfoListCounter++;
         uv_tcp_connect(connect, socket, (const struct sockaddr*)&dest, on_connect);
     }
 
@@ -432,10 +430,35 @@ void uv_msg_timer_callback(uv_timer_t* handle)
     }
 }
 
-void uv_loginTask_statistics_timer_callback(uv_timer_t* handle)
+void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
 {
-    LOG4_INFO("---------uv_loginTask_statistics_timer_callback-------");
-    std::vector<UserInfo>& listUserInfo = *(std::vector<UserInfo>*)handle->data;
+    LOG4_INFO("---------uv_logintask_statistics_timer_callback-------");
+    UvTimerData* pUvTimerData = (UvTimerData*)handle->data;
+    std::vector<UserInfo>& listUserInfo = *(std::vector<UserInfo>*)pUvTimerData->vUserInfo;
+    int perio = pUvTimerData->iPerio;//周期
+    int batch = pUvTimerData->iBatch;//并发数
+    static int userInfoListCounter = 0;
+    long long tatolCostTime = 0;
+
+    //计算周期内指定并发数的QPS
+    // for(const auto& userInfo:listUserInfo)
+    int i = 0;
+    for(;userInfoListCounter < (int)listUserInfo.size() && i < batch ; i++)
+    {
+        tatolCostTime += (listUserInfo[userInfoListCounter].loginInfo.loginRspTime - listUserInfo[userInfoListCounter].loginInfo.loginTime);
+        userInfoListCounter++;
+    }
+    if(userInfoListCounter && (userInfoListCounter%(int)listUserInfo.size() == 0))
+    {
+        batch = i;
+    }
+    LOG4_INFO("-----------Time:%ld Login Tps (conroutin(%d) , perio (%d), tatolCostTime(%ld), QPS(%f))-----------",GetMicrosecond(),  batch, perio, tatolCostTime, ((tatolCostTime/(batch*1.0))/perio));
+    printf("-----------Time:%ld Login Tps (conroutin(%d) , perio (%d), tatolCostTime(%ld), QPS(%f))-----------\n",GetMicrosecond(),  batch, perio, tatolCostTime, ((tatolCostTime/(batch*1.0))/perio));
+    tatolCostTime = 0;
+    if(userInfoListCounter >= (int)listUserInfo.size())
+    {
+        userInfoListCounter = 0;
+    }
 }
 
 bool LoadConfig(util::CJsonObject& oConf, const char* strConfFile)
@@ -576,20 +599,28 @@ int main(int argc, char* argv[])
     }
 
     //创建连接定时器
+    UvTimerData uvTimerData;
     int perio = 1;
     if(!g_cfg.Get("create_conn_timer_perio", perio))
     {
         perio = 1;
     }
+    uvTimerData.iPerio = perio;
+    int batch = CONNECTS_BACTH_PERIO;
+    if(!g_cfg.Get("create_conn_nums_pertime", batch))
+    {
+        batch = CONNECTS_BACTH_PERIO;
+    }
+    uvTimerData.iBatch = batch;
     uv_timer_t*  creatConnTimer= new uv_timer_t; 
-    creatConnTimer->data = &listUserInfo;//挂接用户信息列表
+    creatConnTimer->data = &uvTimerData;//挂接用户信息列表
     uv_timer_init(uv_default_loop(), creatConnTimer);
     uv_timer_start(creatConnTimer, uv_creatconn_timer_callback, 0, perio*1000);//next loop 执行第一次, 并周期为perio秒
 
     uv_timer_t*  loginTaskStatisticsTimer= new uv_timer_t; 
-    loginTaskStatisticsTimer->data = &listUserInfo;//挂接用户信息列表
+    loginTaskStatisticsTimer->data = &uvTimerData;//挂接用户信息列表
     uv_timer_init(uv_default_loop(), loginTaskStatisticsTimer);
-    uv_timer_start(loginTaskStatisticsTimer, uv_loginTask_statistics_timer_callback, perio*1000, perio*1000);//perio*1000 执行第一次, 并周期为perio秒
+    uv_timer_start(loginTaskStatisticsTimer, uv_logintask_statistics_timer_callback, perio*1000*5, perio*1000);//5倍perio*1000 执行第一次, 并周期为perio秒
 
     // uv_timer_t*  msgTimer= new uv_timer_t; 
     // msgTimer->data = &socketList;
