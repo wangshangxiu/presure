@@ -110,6 +110,28 @@ void CacllateShareKey(const std::string& pubKey, const std::string& priKey, std:
     sharedKey.resize(ECDHKEY_LEN);
     sharedKey.assign((char*)signalKey, ECDHKEY_LEN);
 }
+void Base64Decode(const std::string& strSrc, std::string& strDest)
+{
+    // base64Decode(strSrc.c_str(), )
+    char *tmpBuf = nullptr;
+    tmpBuf = base64Decode(const_cast<char*>(strSrc.c_str()), strSrc.size());
+    if(tmpBuf)
+    {
+        strDest = tmpBuf;
+        delete tmpBuf;
+    }
+}
+void Base64Encode(const std::string& strSrc, std::string& strDest)
+{
+    char *tmpBuf = nullptr;
+    tmpBuf = base64Encode(strSrc.c_str(), strSrc.size());
+    if(tmpBuf)
+    {
+        strDest = tmpBuf;
+        delete tmpBuf;
+    }
+
+}
 
 std::string GetPassword(unsigned int size)
 {

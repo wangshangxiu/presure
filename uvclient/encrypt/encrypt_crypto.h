@@ -20,5 +20,6 @@ bool Aes256Encrypt(const std::string& strSrc, std::string& strDest,const std::st
 bool Aes256Decrypt(const std::string& strSrc, std::string& strDest,const std::string & aes_key);
 void GenerateEcdhKeyPair(std::string& pubKey, std::string& priKey);
 void CacllateShareKey(const std::string& pubKey, const std::string& priKey, std::string& sharedKey);
-
+void Base64Decode(const std::string& strSrc, std::string& strDest);
+void Base64Encode(const std::string& strSrc, std::string& strDest);
 #endif
