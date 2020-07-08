@@ -1,0 +1,24 @@
+#include <iostream>
+#include <stdio.h>
+#include "msg.pb.h"
+#include "login.pb.h"
+#include "ImError.h"
+#include "client.pb.h"
+
+#include "encrypt_crypto.h"
+int main(int argc, char* argv[])
+{
+	// "msgPb" : { "$binary" : "CIGAh9TmgezdERICMDcgguCDuP+M/eIRKAIwzoeUpJD1xeVcOPzMw43VvOoCSJEDUpABCo0BeyJkYXRhIjp7Imdyb3VwTmFtZSI6IuaIkeaYr+acgOWkp+eahOWPr+eIseWvueixoSIsImNyZWF0ZVRpbWUiOjE1OTQxNzcyNjY1OTAsInVwZGF0ZVRpbWUiOjE1OTQxNzcyNjY1OTAsImlkIjoxMjgwNjk4Mzk2NDE5NjE2NzcwLCJzdGF0ZSI6MX19WM6HlKSQ9cXlXGjy7ZT4BXITMTI4MDY5ODM5NjQxOTYxNjc3MA==", "$type" : "00" },
+	std::string msgPb = "CIGAh9TmgezdERICMDcgguCDuP+M/eIRKAIwzoeUpJD1xeVcOPzMw43VvOoCSJEDUpABCo0BeyJkYXRhIjp7Imdyb3VwTmFtZSI6IuaIkeaYr+acgOWkp+eahOWPr+eIseWvueixoSIsImNyZWF0ZVRpbWUiOjE1OTQxNzcyNjY1OTAsInVwZGF0ZVRpbWUiOjE1OTQxNzcyNjY1OTAsImlkIjoxMjgwNjk4Mzk2NDE5NjE2NzcwLCJzdGF0ZSI6MX19WM6HlKSQ9cXlXGjy7ZT4BXITMTI4MDY5ODM5NjQxOTYxNjc3MA==";
+	std::string oringeStrPb;
+	Base64Decode(msgPb, oringeStrPb);
+	if(oringeStrPb.size() > 0)
+	{
+		
+		printf("successfully!, PBsize=%d\n", oringeStrPb.size());
+		im_client::SendMsgReq notifyReq;
+		notifyReq.ParseFromString(oringeStrPb);
+		printf("pb %s\n",notifyReq.DebugString().c_str());
+	}
+	return 0;
+}
