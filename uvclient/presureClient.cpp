@@ -538,12 +538,12 @@ void StringSplit(const std::string& strSrc, std::vector<std::string>& vec, char 
 
 int main(int argc, char* argv[])
 {
-    if(argc < 3) 
+    if(argc < 4) 
     {
         printf("Usage: %s hostAddress port  cfgfile\n", argv[0]);
         return 0;
     }
-    // dstIp.assign(argv[1]);
+    //从命令行参数获取目标IP列表、端口
     StringSplit(argv[1], dstIpList);
     if(dstIpList.size() == 0 )
     {
@@ -566,7 +566,7 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    //读取用户数据文件
+    //从文件加载用户数据
     std::string strSampleDataPath;
     std::string strSampleDataSize;
     g_cfg.Get("user_data_path", strSampleDataPath);
@@ -581,7 +581,7 @@ int main(int argc, char* argv[])
     }
     LOG4_DEBUG("listUserInfo size(%d)", listUserInfo.size());
 
-    //启动多线程结构
+    //启动woker线程
     uv_async_t* async = new uv_async_t;
     uv_async_init(uv_default_loop(), async, uv_async_call);//用于woker线程异步通知主线程
     int worker_thread_num = 1; 
@@ -598,7 +598,7 @@ int main(int argc, char* argv[])
         th.detach();
     }
 
-    //创建连接定时器
+    //创建定时器
     UvTimerData uvTimerData;
     int perio = 1;
     if(!g_cfg.Get("create_conn_timer_perio", perio))
@@ -612,18 +612,20 @@ int main(int argc, char* argv[])
         batch = CONNECTS_BACTH_PERIO;
     }
     uvTimerData.iBatch = batch;
+    uvTimerData.vUserInfo = &listUserInfo;//用户容器
+
     uv_timer_t*  creatConnTimer= new uv_timer_t; 
-    creatConnTimer->data = &uvTimerData;//挂接用户信息列表
+    creatConnTimer->data = &uvTimerData;//挂接定时器用到的数据
     uv_timer_init(uv_default_loop(), creatConnTimer);
     uv_timer_start(creatConnTimer, uv_creatconn_timer_callback, 0, perio*1000);//next loop 执行第一次, 并周期为perio秒
 
     uv_timer_t*  loginTaskStatisticsTimer= new uv_timer_t; 
-    loginTaskStatisticsTimer->data = &uvTimerData;//挂接用户信息列表
+    loginTaskStatisticsTimer->data = &uvTimerData;//挂接定时器用到的数据
     uv_timer_init(uv_default_loop(), loginTaskStatisticsTimer);
     uv_timer_start(loginTaskStatisticsTimer, uv_logintask_statistics_timer_callback, perio*1000*5, perio*1000);//5倍perio*1000 执行第一次, 并周期为perio秒
 
     // uv_timer_t*  msgTimer= new uv_timer_t; 
-    // msgTimer->data = &socketList;
+    // msgTimer->data = &uvTimerData;
     // uv_timer_init(uv_default_loop(), msgTimer);
     // uv_timer_start(msgTimer, uv_msg_timer_callback, 1*1000, 1*1000);//1s后启动, 并周期为1s,消息发送定时器
 
