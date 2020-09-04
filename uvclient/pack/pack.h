@@ -13,13 +13,12 @@ class Pack
 {
 public:
     Pack(RingBuffer* recvRb, void *recvMem, RingBuffer* sendRb, void* sendMem, uv_async_t* uvAsyn, int index);
+    Pack();//
     ~Pack();
     static void StartThread(void *p);                           //线程函数入口
     typedef void (Pack::*MemberFuntionPointer)(const ImPack& pack);
 
     static void SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool bEncryt = true);//作为服务器时的发送函数
-    static void SendMsg(uv_connect_t* conn, int icmd , const MsgBody& msgBody, bool bEncryt = true);//作为主动发连接的客户端时的发送函数
-    static void AsynSendMsg(const ImPack& pack);
 protected:
     virtual void OnThread();                                    //线程函数
     void DoTask(const ImPack& pack);                            //在线程函数里根据处理业务回调

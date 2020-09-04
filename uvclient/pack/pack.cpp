@@ -1,7 +1,8 @@
 #include <unistd.h>
 #include "encrypt_crypto.h"
 #include "pack.h"
-extern std::map<uv_tcp_t*, uv_connect_t*> g_mapSocketConn;
+#include "connect.h"
+// extern std::map<uv_tcp_t*, void*> g_mapConnCache;
 const unsigned char g_Aes_ReserveBit  = 0x04;          ///< 采用256位aes
 Pack::Pack(RingBuffer* recvRb, void *recvMem, RingBuffer* sendRb, void* sendMem, uv_async_t* uvAsyn, int index) :
     m_recvRb(recvRb),
@@ -10,6 +11,15 @@ Pack::Pack(RingBuffer* recvRb, void *recvMem, RingBuffer* sendRb, void* sendMem,
     m_sendMem(sendMem),
     m_asyn_send(uvAsyn),
     m_index(index)
+{
+}
+Pack::Pack():
+    m_recvRb(nullptr),
+    m_recvMem(nullptr),
+    m_sendRb(nullptr),
+    m_sendMem(nullptr),
+    m_asyn_send(nullptr),
+    m_index(0)
 {
 }
 
@@ -93,18 +103,16 @@ void Pack::SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool
     LOG4_INFO("-------SendMsg---------");
     uv_write_t *wReq = new uv_write_t;
     uv_buf_t bufArray[2] = {{0, 0},{0, 0}};
-
-    uv_connect_t *conn = nullptr;
-    const auto& iter = g_mapSocketConn.find(handle);
-    if(iter != g_mapSocketConn.end())
+    auto iter = uvconn::g_mapConnCache.find((uv_tcp_t*)handle);//判断连接是否还在
+    if(iter == uvconn::g_mapConnCache.end())
     {
-        conn = iter->second;
+        LOG4_ERROR("stream(%p) no exist, maybe have recycle", handle);
+        //需要再用时，连接不在了需要回收资源吗
+        return;
     }
-    UserInfo *pUserInfo = (UserInfo*)conn->data;
-
+    UserInfo *pUserInfo = (UserInfo*)handle->data;
     tagAppMsgHead head;
     std::string data;
-
     if(bEncryt)
     {
         if(pUserInfo)
@@ -166,81 +174,4 @@ void Pack::SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool
             req =nullptr;
         }
     });
-}
-
-void Pack::SendMsg(uv_connect_t* conn, int icmd , const MsgBody& msgBody, bool bEncryt)
-{
-    LOG4_INFO("-------SendMsg---------");
-    uv_write_t *wReq = new uv_write_t;
-    uv_buf_t bufArray[2] = {{0, 0},{0, 0}};
-    
-    tagAppMsgHead head;
-    std::string data;
-    UserInfo* pUserInfo = (UserInfo*)conn->data;
-    if(bEncryt)
-    {
-        if(pUserInfo)
-        {
-            std::string& strAesKey = pUserInfo->aesKey;
-            if(strAesKey.size()  > 0)
-            {
-                if(!Aes256Encrypt(msgBody.SerializeAsString(), data, strAesKey))
-                {
-                    LOG4_ERROR("aes encrypt error, data(%s)", data.c_str());
-                }
-            }
-            else
-            {
-                LOG4_ERROR("strAesKey error, strAesKey(%s) size = %d", strAesKey.c_str(), (int)strAesKey.size());    
-            }
-        }
-        else
-        {
-            LOG4_ERROR("there is no userInfo, pUserInfo (%p)", pUserInfo);
-        }
-#ifdef USE_HEAD_LEN
-        head.len = data.size() + sizeof(tagAppMsgHead);
-#else
-        head.len = data.size();
-#endif
-        head.reserve |= g_Aes_ReserveBit;//aes 加密
-    }
-    else
-    {
-        data = msgBody.SerializeAsString();
-#ifdef USE_HEAD_LEN
-        head.len = data.size() + sizeof(tagAppMsgHead);
-#else
-        head.len = data.size();
-#endif
-    }
-    head.cmd = icmd;
-    if(pUserInfo) {head.seq = pUserInfo->seq++;}
-    head.len = htonl(head.len);
-    head.cmd = htonl(head.cmd);
-    head.seq = htonl(head.seq);
-    bufArray[0].base = (char*)&head;
-    bufArray[0].len = sizeof(tagAppMsgHead);
-    bufArray[1].base = (char*)data.c_str();
-    bufArray[1].len = data.size(); 
-    uv_write(wReq, (uv_stream_t*)conn->handle, bufArray, 2, [](uv_write_t* req, int status){
-        if(status ==0) 
-        {
-            LOG4_INFO("write successfully, req=%p", req);
-        }
-        else
-        {
-            LOG4_INFO("write error, status= %d", status);
-        }
-
-        if(req)
-        {
-            delete req;
-            req =nullptr;
-        }
-    });
-}
-void Pack::AsynSendMsg(const ImPack& pack)
-{
-
 }

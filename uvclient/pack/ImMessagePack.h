@@ -9,12 +9,15 @@ class ImMessagePack: public Pack
 {
 public:
     ImMessagePack(RingBuffer* recvRb, void *recvMem, RingBuffer* sendRb, void* sendMem, uv_async_t* uvAsyn, int index);
+    ImMessagePack();
     ~ImMessagePack();
     //主动请求
-    static void LoginReq(uv_connect_t* conn, MsgBody& msgBody);
-    static void HeatBeatReq(uv_connect_t* conn, MsgBody& msgBody);
-    static void MsgChatReq(uv_connect_t* conn, MsgBody& msgBody);
-    static void GroupChatReq(uv_connect_t* conn, MsgBody& msgBody);
+    static void LoginReq(UserInfo& userInfo, MsgBody& msgBody);
+    static void HeatBeatReq(const UserInfo& userInfo, MsgBody& msgBody);
+    static void MsgChatReq(const UserInfo& userInfo, MsgBody& msgBody);
+    static void GroupChatReq(const UserInfo& userInfo, MsgBody& msgBody);
+
+    void CallDoTask(const ImPack& pack);
 private:
     //被动接收回复
     void LoginRsp(const ImPack& pack);

@@ -17,12 +17,12 @@
 
 -----工程构建步骤-------
 1、cd /app/uvclient  进到压测客户端目录
-2、mkdir cmake_build_debug && cd cmake_build_debug
+2、mkdir cmake-build-debug && cd cmake-build-debug
 3、cmake ..
 4、cd -
-5、make -C cmake_build_debug
+5、make -C cmake-build-debug
 最后会在工程目录下产生可执行的presureClient
-如果要重新构建可以删除cmake_build_debug,重新从步骤<2>开始
+如果要重新构建可以删除cmake-build-debug ,重新从步骤<2>开始
 
 cmake构建多目录源码工程参考
 http://blog.chinaunix.net/uid-30512847-id-5775284.html

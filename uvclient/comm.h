@@ -3,9 +3,11 @@
 
 #include <string>
 #include <vector>
+#include <uv.h>
 #include "log4cplus/fileappender.h"
 #include "log4cplus/logger.h"
 #include "log4cplus/loggingmacros.h"
+#include "CJsonObject.hpp"
 
 //框架日志都使用本系列日志接口
 #define LOG4_FATAL(...) LOG4CPLUS_FATAL_FMT(Logger::GetInstance()->GetLogger(), ##__VA_ARGS__)
@@ -61,6 +63,7 @@ typedef struct {
 
 typedef struct {
     const void* stream = nullptr; //uv_stream_t*
+    void* UserInfoPtr = nullptr; //UserInfo
     char *packBuf = nullptr;
     int len = 0;
 }ImPack;
@@ -74,6 +77,7 @@ typedef struct
     };
     int ieventType = EVENT_DEFAULT;
     const void *handle = nullptr;
+    const void *userInfo = nullptr;
     int istatus = 0;
 }CustomEvent;
 
@@ -96,7 +100,37 @@ typedef struct {
     std::string sessionId;//
     ConnInfo info;//连接信息
     LoginInfo  loginInfo;//登录事务信息
-    void *timer = nullptr;//用户心跳定时器
+    uv_timer_t *timer = nullptr;//用户心跳定时器
+    uv_timer_t *msgTimer = nullptr;//消息定时器
+    const uv_tcp_t *conn = nullptr;//此用户使用的连接
+
+    void reCycleSource()
+    {
+        if(timer)
+        {
+            uv_timer_stop((uv_timer_t*)timer);
+            uv_close((uv_handle_t*)timer,[](uv_handle_t* handle){
+                if(handle){
+                    delete (uv_timer_t*)handle;
+                }
+            });
+            timer = nullptr;
+        }
+        if(msgTimer)
+        {
+            uv_timer_stop((uv_timer_t*)msgTimer);
+            uv_close((uv_handle_t*)msgTimer,[](uv_handle_t* handle){
+                if(handle){
+                    delete (uv_timer_t*)handle;
+                }
+            });
+            msgTimer = nullptr;
+        }
+        if(conn)
+        {
+            conn == nullptr; //uv_tcp_t*,这里不用del,
+        }
+    }
 }UserInfo;
 
 typedef struct 
@@ -104,8 +138,13 @@ typedef struct
     std::vector<UserInfo> *vUserInfo;
     int iBatch;//周期内发起的并发数
     int iPerio;//周期
-}UvTimerData;
+}UTimerData;
 
+namespace globalFuncation
+{
 long long GetMicrosecond();
-
+bool LoadConfig(util::CJsonObject& oConf, const char* strConfFile);
+bool LoadUserInfoFromFile(std::vector<UserInfo>& userInfo, const std::string& strPath);
+void StringSplit(const std::string& strSrc, std::vector<std::string>& vec, char c= ':');
+};
 #endif//_COMM_H

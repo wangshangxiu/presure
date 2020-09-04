@@ -12,8 +12,8 @@
 #include<iostream>
  
 
-//°²×°openssl¿â£¬°²×° protol-c ¿â
-//×ªÎª16½øÖÆ×Ö·û´®
+//å®‰è£…opensslåº“ï¼Œå®‰è£… protol-c åº“
+//è½¬ä¸º16è¿›åˆ¶å­—ç¬¦ä¸²
 char* hex2Str(char *sSrc, int nSrcLen, char *sDest)
 {
 	int  i;
@@ -57,7 +57,7 @@ int hexStrToByte(char* source, int sourceLen, unsigned char* dest)
 }
 
 
-// base64 ½âÂë
+// base64 è§£ç 
 char * base64Decode(char *input, int length)//, bool newLine)
 {
 	BIO *b64 = NULL;
@@ -77,7 +77,7 @@ char * base64Decode(char *input, int length)//, bool newLine)
 	return buffer;
 }
 
-// base64 ±àÂë
+// base64 ç¼–ç 
 char * base64Encode(const char *buffer, int length)//, bool newLine)
 {
 	BIO *bmem = NULL;

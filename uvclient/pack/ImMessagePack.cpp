@@ -1,10 +1,17 @@
 #include "ImMessagePack.h"
 #include "encrypt_crypto.h"
 extern std::map<uv_tcp_t*, uv_connect_t*> g_mapSocketConn;
-extern RSA* rsaPublicKey;
-
 ImMessagePack::ImMessagePack(RingBuffer* recvRb, void *recvMem, RingBuffer* sendRb, void* sendMem, uv_async_t* uvAsyn, int index):
     Pack(recvRb, recvMem, sendRb, sendMem, uvAsyn, index)
+{
+    //ConnectMemberFun(1002, &ImMessagePack::LoginRsp);//这种写法会报编译错误，提示找不到类型
+    ConnectMemberFun(1002, MemberFuntionPointer(&ImMessagePack::LoginRsp));
+    ConnectMemberFun(1102, MemberFuntionPointer(&ImMessagePack::HearBeatRsp));
+    ConnectMemberFun(4002, MemberFuntionPointer(&ImMessagePack::MsgChatRsp));
+    ConnectMemberFun(4502, MemberFuntionPointer(&ImMessagePack::GroupChatRsp));
+}
+
+ImMessagePack::ImMessagePack()
 {
     //ConnectMemberFun(1002, &ImMessagePack::LoginRsp);//这种写法会报编译错误，提示找不到类型
     ConnectMemberFun(1002, MemberFuntionPointer(&ImMessagePack::LoginRsp));
@@ -17,36 +24,39 @@ ImMessagePack::~ImMessagePack()
 {
 }
 
-
-void ImMessagePack::LoginReq(uv_connect_t* conn, MsgBody& msgBody)
+void ImMessagePack::CallDoTask(const ImPack& pack)
 {
+    DoTask(pack); //in basic class Pack
+}
 
-    UserInfo* pUserInfo = (UserInfo*)conn->data;
-    if(pUserInfo)
+void ImMessagePack::LoginReq(UserInfo& userInfo, MsgBody& msgBody)
+{
+    static const std::string& rsaKeyPath = "./conf/rsakey/public_key.pem";
+    static RSA* rsaPublicKey = readRsaPublicKeyFromFile(const_cast<char*>(rsaKeyPath.c_str())); 
     {
-        pUserInfo->loginInfo.loginTime = GetMicrosecond();//设置登录时间
-        LOG4_TRACE("userId(%ld) devId(%s) token(%s) logining at %ld ...", pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginTime);
-        printf("userId(%ld) devId(%s) token(%s) logining at %ld ...\n", pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginTime);
+        userInfo.loginInfo.loginTime = globalFuncation::GetMicrosecond();//设置登录时间
+        LOG4_TRACE("userId(%ld) devId(%s) token(%s) logining at %ld ...", userInfo.userId, userInfo.devId.c_str(), userInfo.authToken.c_str(), userInfo.loginInfo.loginTime);
+        printf("userId(%ld) devId(%s) token(%s) logining at %ld ...\n", userInfo.userId, userInfo.devId.c_str(), userInfo.authToken.c_str(), userInfo.loginInfo.loginTime);
         im_login::Login loginReq;
         im_login::RsaData rsaData;
-        pUserInfo->aesKey = GetPassword(32);//临时aeskey
-        GenerateEcdhKeyPair(pUserInfo->ecdhKey[0], pUserInfo->ecdhKey[1]);//ecdh key pair
-        rsaData.set_userid(pUserInfo->userId);
-        rsaData.set_ecdhpubkey(pUserInfo->ecdhKey[0]);
-        rsaData.set_aeskey(pUserInfo->aesKey);
+        userInfo.aesKey = GetPassword(32);//临时aeskey
+        GenerateEcdhKeyPair(userInfo.ecdhKey[0], userInfo.ecdhKey[1]);//ecdh key pair
+        rsaData.set_userid(userInfo.userId);
+        rsaData.set_ecdhpubkey(userInfo.ecdhKey[0]);
+        rsaData.set_aeskey(userInfo.aesKey);
 
         im_login::AESData aesData;
-        aesData.set_token(pUserInfo->authToken); // 用户token
+        aesData.set_token(userInfo.authToken); // 用户token
         aesData.set_clienttime(0); // 时间戳，秒，4个字节
-        aesData.set_devid(pUserInfo->devId); // 设备id
-        aesData.set_loginseq(pUserInfo->loginSeq); // 登录序列号，每次自增，8个字节
+        aesData.set_devid(userInfo.devId); // 设备id
+        aesData.set_loginseq(userInfo.loginSeq); // 登录序列号，每次自增，8个字节
         aesData.set_other("");    // 其余数据待定
 
         std::string strRsaEncryptDest;
         std::string strAesEncryptDest;
         if(Rsa2048Encrypt(rsaData.SerializeAsString(), strRsaEncryptDest, rsaPublicKey, false))
         {
-            if(Aes256Encrypt(aesData.SerializeAsString(), strAesEncryptDest, pUserInfo->aesKey))
+            if(Aes256Encrypt(aesData.SerializeAsString(), strAesEncryptDest, userInfo.aesKey))
             {
                 loginReq.set_rsadata(strRsaEncryptDest);
                 loginReq.set_aesdata(strAesEncryptDest);
@@ -64,10 +74,6 @@ void ImMessagePack::LoginReq(uv_connect_t* conn, MsgBody& msgBody)
             LOG4_ERROR("Rsa2048Encrypt faild!");
         }
     }
-    else
-    {
-        LOG4_ERROR("userInfo faild!");
-    }
 }
 
 void ImMessagePack::LoginRsp(const ImPack& pack)
@@ -79,31 +85,13 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
         LOG4_ERROR("pb parse error , msgbody(%s)", msgbody.DebugString().c_str());
         return;
     }
-
-    //uv_connect_t* conn = (uv_connect_t*)pack.stream;//这样强转不起效
-    uv_connect_t* conn = nullptr;
-    UserInfo* pUserInfo = nullptr;
-    const auto& iter = g_mapSocketConn.find((uv_tcp_t*)pack.stream);
-    if(iter != g_mapSocketConn.end())
-    {
-        conn = (uv_connect_t*)iter->second;
-        if(conn)
-        {
-            pUserInfo = (UserInfo*)conn->data;
-        }
-        else
-        {
-            LOG4_ERROR("conn (%p) from stream(%p) is not a uv_connect_t", conn, pack.stream);
-            return;
-        }
-    }
-
+    UserInfo* pUserInfo = (UserInfo*)pack.UserInfoPtr;
     int status = ntohl(*(unsigned short*)(pack.packBuf + 14));//移动14个字节就是status
-    pUserInfo->loginInfo.loginStatus = status;
     if(status == 0)//成功的情况
     {
         if(pUserInfo)
         {
+            pUserInfo->loginInfo.loginStatus = status;
             std::string strLoginRsp;
             LOG4_INFO("pUserInfo->aesKey = %s", pUserInfo->aesKey.c_str());
             if(Aes256Decrypt(msgbody.body(), strLoginRsp, pUserInfo->aesKey))//aes256, key 256 bits
@@ -119,7 +107,7 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
                     LOG4_ERROR("decrypt sessionKey error, sharedKey(%s)", sharedKey.c_str());
                     return;
                 }
-                pUserInfo->loginInfo.loginRspTime = GetMicrosecond();//登录返回并处理完的时间
+                pUserInfo->loginInfo.loginRspTime = globalFuncation::GetMicrosecond();//登录返回并处理完的时间
                 LOG4_INFO("userId(%lld) devId(%s) token(%s) loginRsp successfully at %ld", 
                     pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime);
                 long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.loginTime;
@@ -129,6 +117,7 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
     #if 1
                 CustomEvent event;
                 event.handle = pack.stream; 
+                event.userInfo = pUserInfo;//连接对应用户信息指针
                 event.istatus = 0;
                 event.ieventType = CustomEvent::EVENT_LOGIN_SUCCESSE;
                 if(m_sendRb->push(&event, sizeof(event), m_sendMem) == 0)//pack放到rb_recv, 能放下则放下
@@ -156,7 +145,7 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
         im_login::LoginRsp loginRsp;
         loginRsp.ParseFromString(msgbody.body());
         LOG4_ERROR("loginRsp failed: (%s)", loginRsp.DebugString().c_str());
-        pUserInfo->loginInfo.loginRspTime = GetMicrosecond();//登录返回并处理完的时间
+        pUserInfo->loginInfo.loginRspTime = globalFuncation::GetMicrosecond();//登录返回并处理完的时间
         LOG4_ERROR("userId(%lld) devId(%s) token(%s) loginRsp failed at %ld", 
             pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime);
         printf("userId(%lld) devId(%s) token(%s) loginRsp failed at %ld\n", 
@@ -173,7 +162,7 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
     }
 }
 
-void ImMessagePack::HeatBeatReq(uv_connect_t* conn, MsgBody& msgBody)
+void ImMessagePack::HeatBeatReq(const UserInfo& userInfo, MsgBody& msgBody)
 {
     
 
@@ -183,7 +172,7 @@ void ImMessagePack::HearBeatRsp(const ImPack& pack)
     LOG4_INFO("HearBeatRsp from stream(%p), cmdId(%d), pack->len(%d)",pack.stream, ntohl(*((unsigned int*)(pack.packBuf + 4))), pack.len);
 }
 
-void ImMessagePack::MsgChatReq(uv_connect_t* conn, MsgBody& msgBody)
+void ImMessagePack::MsgChatReq(const UserInfo& userInfo, MsgBody& msgBody)
 {/*
     message SendMsgReq
     {
@@ -209,11 +198,9 @@ void ImMessagePack::MsgChatReq(uv_connect_t* conn, MsgBody& msgBody)
 
     }
 */
-    UserInfo* pUserInfo = (UserInfo*)conn->data;
-    if(pUserInfo)
     {
         im_client::SendMsgReq msgchat;
-        msgchat.set_fromid(pUserInfo->userId);
+        msgchat.set_fromid(userInfo.userId);
         msgBody.set_body(msgchat.SerializeAsString());
         msgBody.set_targetid("");
     }
@@ -225,7 +212,7 @@ void ImMessagePack::MsgChatRsp(const ImPack& pack)
 {
     LOG4_INFO("MsgChatRsp from stream(%p), cmdId(%d), pack->len(%d)",pack.stream, ntohl(*((unsigned int*)(pack.packBuf + 4))), pack.len);
 }
-void ImMessagePack::GroupChatReq(uv_connect_t* conn, MsgBody& msgBody)
+void ImMessagePack::GroupChatReq(const UserInfo& userInfo, MsgBody& msgBody)
 {
 
 }

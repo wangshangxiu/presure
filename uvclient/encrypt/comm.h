@@ -8,9 +8,9 @@
 extern "C" {
 #endif
 
-// base64 ½âÂë
+// base64 è§£ç 
 char * base64Decode(char *input, int length);//, bool newLine)
-// base64 ±àÂë
+// base64 ç¼–ç 
 char * base64Encode(const char *buffer, int length);//, bool newLine)
 char* hex2Str(char *sSrc, int nSrcLen, char *sDest);
 int hexStrToByte(char* source, int sourceLen, unsigned char* dest);

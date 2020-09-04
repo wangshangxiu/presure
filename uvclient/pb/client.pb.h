@@ -38,7 +38,7 @@ namespace protobuf_client_2eproto {
 struct TableStruct {
   static const ::google::protobuf::internal::ParseTableField entries[];
   static const ::google::protobuf::internal::AuxillaryParseTableField aux[];
-  static const ::google::protobuf::internal::ParseTable schema[31];
+  static const ::google::protobuf::internal::ParseTable schema[33];
   static const ::google::protobuf::internal::FieldMetadata field_metadata[];
   static const ::google::protobuf::internal::SerializationTable serialization_table[];
   static const ::google::protobuf::uint32 offsets[];
@@ -55,6 +55,12 @@ extern BatchSendMsgStateReqDefaultTypeInternal _BatchSendMsgStateReq_default_ins
 class BatchSendMsgStateResp;
 class BatchSendMsgStateRespDefaultTypeInternal;
 extern BatchSendMsgStateRespDefaultTypeInternal _BatchSendMsgStateResp_default_instance_;
+class ClientNoticeReq;
+class ClientNoticeReqDefaultTypeInternal;
+extern ClientNoticeReqDefaultTypeInternal _ClientNoticeReq_default_instance_;
+class ClientNoticeResp;
+class ClientNoticeRespDefaultTypeInternal;
+extern ClientNoticeRespDefaultTypeInternal _ClientNoticeResp_default_instance_;
 class ForceExitReq;
 class ForceExitReqDefaultTypeInternal;
 extern ForceExitReqDefaultTypeInternal _ForceExitReq_default_instance_;
@@ -145,6 +151,8 @@ namespace protobuf {
 template<> ::im_client::BatchRecvMsgStateResp* Arena::CreateMaybeMessage<::im_client::BatchRecvMsgStateResp>(Arena*);
 template<> ::im_client::BatchSendMsgStateReq* Arena::CreateMaybeMessage<::im_client::BatchSendMsgStateReq>(Arena*);
 template<> ::im_client::BatchSendMsgStateResp* Arena::CreateMaybeMessage<::im_client::BatchSendMsgStateResp>(Arena*);
+template<> ::im_client::ClientNoticeReq* Arena::CreateMaybeMessage<::im_client::ClientNoticeReq>(Arena*);
+template<> ::im_client::ClientNoticeResp* Arena::CreateMaybeMessage<::im_client::ClientNoticeResp>(Arena*);
 template<> ::im_client::ForceExitReq* Arena::CreateMaybeMessage<::im_client::ForceExitReq>(Arena*);
 template<> ::im_client::ForceExitResp* Arena::CreateMaybeMessage<::im_client::ForceExitResp>(Arena*);
 template<> ::im_client::Msg* Arena::CreateMaybeMessage<::im_client::Msg>(Arena*);
@@ -1481,6 +1489,329 @@ class PushNoticeResp : public ::google::protobuf::Message /* @@protoc_insertion_
 };
 // -------------------------------------------------------------------
 
+class ClientNoticeReq : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:im_client.ClientNoticeReq) */ {
+ public:
+  ClientNoticeReq();
+  virtual ~ClientNoticeReq();
+
+  ClientNoticeReq(const ClientNoticeReq& from);
+
+  inline ClientNoticeReq& operator=(const ClientNoticeReq& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  #if LANG_CXX11
+  ClientNoticeReq(ClientNoticeReq&& from) noexcept
+    : ClientNoticeReq() {
+    *this = ::std::move(from);
+  }
+
+  inline ClientNoticeReq& operator=(ClientNoticeReq&& from) noexcept {
+    if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+  #endif
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const ClientNoticeReq& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const ClientNoticeReq* internal_default_instance() {
+    return reinterpret_cast<const ClientNoticeReq*>(
+               &_ClientNoticeReq_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    8;
+
+  void Swap(ClientNoticeReq* other);
+  friend void swap(ClientNoticeReq& a, ClientNoticeReq& b) {
+    a.Swap(&b);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline ClientNoticeReq* New() const final {
+    return CreateMaybeMessage<ClientNoticeReq>(NULL);
+  }
+
+  ClientNoticeReq* New(::google::protobuf::Arena* arena) const final {
+    return CreateMaybeMessage<ClientNoticeReq>(arena);
+  }
+  void CopyFrom(const ::google::protobuf::Message& from) final;
+  void MergeFrom(const ::google::protobuf::Message& from) final;
+  void CopyFrom(const ClientNoticeReq& from);
+  void MergeFrom(const ClientNoticeReq& from);
+  void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input) final;
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const final;
+  ::google::protobuf::uint8* InternalSerializeWithCachedSizesToArray(
+      bool deterministic, ::google::protobuf::uint8* target) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(ClientNoticeReq* other);
+  private:
+  inline ::google::protobuf::Arena* GetArenaNoVirtual() const {
+    return NULL;
+  }
+  inline void* MaybeArenaPtr() const {
+    return NULL;
+  }
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // string fromNickName = 2;
+  void clear_fromnickname();
+  static const int kFromNickNameFieldNumber = 2;
+  const ::std::string& fromnickname() const;
+  void set_fromnickname(const ::std::string& value);
+  #if LANG_CXX11
+  void set_fromnickname(::std::string&& value);
+  #endif
+  void set_fromnickname(const char* value);
+  void set_fromnickname(const char* value, size_t size);
+  ::std::string* mutable_fromnickname();
+  ::std::string* release_fromnickname();
+  void set_allocated_fromnickname(::std::string* fromnickname);
+
+  // string fromHeadImg = 3;
+  void clear_fromheadimg();
+  static const int kFromHeadImgFieldNumber = 3;
+  const ::std::string& fromheadimg() const;
+  void set_fromheadimg(const ::std::string& value);
+  #if LANG_CXX11
+  void set_fromheadimg(::std::string&& value);
+  #endif
+  void set_fromheadimg(const char* value);
+  void set_fromheadimg(const char* value, size_t size);
+  ::std::string* mutable_fromheadimg();
+  ::std::string* release_fromheadimg();
+  void set_allocated_fromheadimg(::std::string* fromheadimg);
+
+  // string msg = 6;
+  void clear_msg();
+  static const int kMsgFieldNumber = 6;
+  const ::std::string& msg() const;
+  void set_msg(const ::std::string& value);
+  #if LANG_CXX11
+  void set_msg(::std::string&& value);
+  #endif
+  void set_msg(const char* value);
+  void set_msg(const char* value, size_t size);
+  ::std::string* mutable_msg();
+  ::std::string* release_msg();
+  void set_allocated_msg(::std::string* msg);
+
+  // int64 fromId = 1;
+  void clear_fromid();
+  static const int kFromIdFieldNumber = 1;
+  ::google::protobuf::int64 fromid() const;
+  void set_fromid(::google::protobuf::int64 value);
+
+  // int64 dstId = 4;
+  void clear_dstid();
+  static const int kDstIdFieldNumber = 4;
+  ::google::protobuf::int64 dstid() const;
+  void set_dstid(::google::protobuf::int64 value);
+
+  // int32 noticeType = 5;
+  void clear_noticetype();
+  static const int kNoticeTypeFieldNumber = 5;
+  ::google::protobuf::int32 noticetype() const;
+  void set_noticetype(::google::protobuf::int32 value);
+
+  // @@protoc_insertion_point(class_scope:im_client.ClientNoticeReq)
+ private:
+
+  ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
+  ::google::protobuf::internal::ArenaStringPtr fromnickname_;
+  ::google::protobuf::internal::ArenaStringPtr fromheadimg_;
+  ::google::protobuf::internal::ArenaStringPtr msg_;
+  ::google::protobuf::int64 fromid_;
+  ::google::protobuf::int64 dstid_;
+  ::google::protobuf::int32 noticetype_;
+  mutable ::google::protobuf::internal::CachedSize _cached_size_;
+  friend struct ::protobuf_client_2eproto::TableStruct;
+};
+// -------------------------------------------------------------------
+
+class ClientNoticeResp : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:im_client.ClientNoticeResp) */ {
+ public:
+  ClientNoticeResp();
+  virtual ~ClientNoticeResp();
+
+  ClientNoticeResp(const ClientNoticeResp& from);
+
+  inline ClientNoticeResp& operator=(const ClientNoticeResp& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  #if LANG_CXX11
+  ClientNoticeResp(ClientNoticeResp&& from) noexcept
+    : ClientNoticeResp() {
+    *this = ::std::move(from);
+  }
+
+  inline ClientNoticeResp& operator=(ClientNoticeResp&& from) noexcept {
+    if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+  #endif
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const ClientNoticeResp& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const ClientNoticeResp* internal_default_instance() {
+    return reinterpret_cast<const ClientNoticeResp*>(
+               &_ClientNoticeResp_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    9;
+
+  void Swap(ClientNoticeResp* other);
+  friend void swap(ClientNoticeResp& a, ClientNoticeResp& b) {
+    a.Swap(&b);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline ClientNoticeResp* New() const final {
+    return CreateMaybeMessage<ClientNoticeResp>(NULL);
+  }
+
+  ClientNoticeResp* New(::google::protobuf::Arena* arena) const final {
+    return CreateMaybeMessage<ClientNoticeResp>(arena);
+  }
+  void CopyFrom(const ::google::protobuf::Message& from) final;
+  void MergeFrom(const ::google::protobuf::Message& from) final;
+  void CopyFrom(const ClientNoticeResp& from);
+  void MergeFrom(const ClientNoticeResp& from);
+  void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input) final;
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const final;
+  ::google::protobuf::uint8* InternalSerializeWithCachedSizesToArray(
+      bool deterministic, ::google::protobuf::uint8* target) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(ClientNoticeResp* other);
+  private:
+  inline ::google::protobuf::Arena* GetArenaNoVirtual() const {
+    return NULL;
+  }
+  inline void* MaybeArenaPtr() const {
+    return NULL;
+  }
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // string codeMsg = 2;
+  void clear_codemsg();
+  static const int kCodeMsgFieldNumber = 2;
+  const ::std::string& codemsg() const;
+  void set_codemsg(const ::std::string& value);
+  #if LANG_CXX11
+  void set_codemsg(::std::string&& value);
+  #endif
+  void set_codemsg(const char* value);
+  void set_codemsg(const char* value, size_t size);
+  ::std::string* mutable_codemsg();
+  ::std::string* release_codemsg();
+  void set_allocated_codemsg(::std::string* codemsg);
+
+  // string nodeId = 6;
+  void clear_nodeid();
+  static const int kNodeIdFieldNumber = 6;
+  const ::std::string& nodeid() const;
+  void set_nodeid(const ::std::string& value);
+  #if LANG_CXX11
+  void set_nodeid(::std::string&& value);
+  #endif
+  void set_nodeid(const char* value);
+  void set_nodeid(const char* value, size_t size);
+  ::std::string* mutable_nodeid();
+  ::std::string* release_nodeid();
+  void set_allocated_nodeid(::std::string* nodeid);
+
+  // int64 msgId = 3;
+  void clear_msgid();
+  static const int kMsgIdFieldNumber = 3;
+  ::google::protobuf::int64 msgid() const;
+  void set_msgid(::google::protobuf::int64 value);
+
+  // int32 code = 1;
+  void clear_code();
+  static const int kCodeFieldNumber = 1;
+  ::google::protobuf::int32 code() const;
+  void set_code(::google::protobuf::int32 value);
+
+  // int32 nodeStartTime = 5;
+  void clear_nodestarttime();
+  static const int kNodeStartTimeFieldNumber = 5;
+  ::google::protobuf::int32 nodestarttime() const;
+  void set_nodestarttime(::google::protobuf::int32 value);
+
+  // int64 sendTime = 4;
+  void clear_sendtime();
+  static const int kSendTimeFieldNumber = 4;
+  ::google::protobuf::int64 sendtime() const;
+  void set_sendtime(::google::protobuf::int64 value);
+
+  // int32 msgSeq = 7;
+  void clear_msgseq();
+  static const int kMsgSeqFieldNumber = 7;
+  ::google::protobuf::int32 msgseq() const;
+  void set_msgseq(::google::protobuf::int32 value);
+
+  // @@protoc_insertion_point(class_scope:im_client.ClientNoticeResp)
+ private:
+
+  ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
+  ::google::protobuf::internal::ArenaStringPtr codemsg_;
+  ::google::protobuf::internal::ArenaStringPtr nodeid_;
+  ::google::protobuf::int64 msgid_;
+  ::google::protobuf::int32 code_;
+  ::google::protobuf::int32 nodestarttime_;
+  ::google::protobuf::int64 sendtime_;
+  ::google::protobuf::int32 msgseq_;
+  mutable ::google::protobuf::internal::CachedSize _cached_size_;
+  friend struct ::protobuf_client_2eproto::TableStruct;
+};
+// -------------------------------------------------------------------
+
 class SendMsgStateReq : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:im_client.SendMsgStateReq) */ {
  public:
   SendMsgStateReq();
@@ -1516,7 +1847,7 @@ class SendMsgStateReq : public ::google::protobuf::Message /* @@protoc_insertion
                &_SendMsgStateReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    8;
+    10;
 
   void Swap(SendMsgStateReq* other);
   friend void swap(SendMsgStateReq& a, SendMsgStateReq& b) {
@@ -1642,6 +1973,24 @@ class SendMsgStateReq : public ::google::protobuf::Message /* @@protoc_insertion
   ::google::protobuf::int32 msgseq() const;
   void set_msgseq(::google::protobuf::int32 value);
 
+  // int32 msgUnReadedNums = 11;
+  void clear_msgunreadednums();
+  static const int kMsgUnReadedNumsFieldNumber = 11;
+  ::google::protobuf::int32 msgunreadednums() const;
+  void set_msgunreadednums(::google::protobuf::int32 value);
+
+  // int64 lasMsgId = 12;
+  void clear_lasmsgid();
+  static const int kLasMsgIdFieldNumber = 12;
+  ::google::protobuf::int64 lasmsgid() const;
+  void set_lasmsgid(::google::protobuf::int64 value);
+
+  // int32 msgNotifyReadedNums = 13;
+  void clear_msgnotifyreadednums();
+  static const int kMsgNotifyReadedNumsFieldNumber = 13;
+  ::google::protobuf::int32 msgnotifyreadednums() const;
+  void set_msgnotifyreadednums(::google::protobuf::int32 value);
+
   // @@protoc_insertion_point(class_scope:im_client.SendMsgStateReq)
  private:
 
@@ -1657,6 +2006,9 @@ class SendMsgStateReq : public ::google::protobuf::Message /* @@protoc_insertion
   ::google::protobuf::int32 nodestarttime_;
   ::google::protobuf::int64 sendtime_;
   ::google::protobuf::int32 msgseq_;
+  ::google::protobuf::int32 msgunreadednums_;
+  ::google::protobuf::int64 lasmsgid_;
+  ::google::protobuf::int32 msgnotifyreadednums_;
   mutable ::google::protobuf::internal::CachedSize _cached_size_;
   friend struct ::protobuf_client_2eproto::TableStruct;
 };
@@ -1697,7 +2049,7 @@ class SendMsgStateResp : public ::google::protobuf::Message /* @@protoc_insertio
                &_SendMsgStateResp_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    9;
+    11;
 
   void Swap(SendMsgStateResp* other);
   friend void swap(SendMsgStateResp& a, SendMsgStateResp& b) {
@@ -1789,6 +2141,20 @@ class SendMsgStateResp : public ::google::protobuf::Message /* @@protoc_insertio
   ::std::string* release_nodeid();
   void set_allocated_nodeid(::std::string* nodeid);
 
+  // string extend = 11;
+  void clear_extend();
+  static const int kExtendFieldNumber = 11;
+  const ::std::string& extend() const;
+  void set_extend(const ::std::string& value);
+  #if LANG_CXX11
+  void set_extend(::std::string&& value);
+  #endif
+  void set_extend(const char* value);
+  void set_extend(const char* value, size_t size);
+  ::std::string* mutable_extend();
+  ::std::string* release_extend();
+  void set_allocated_extend(::std::string* extend);
+
   // int64 clientMsgId = 3;
   void clear_clientmsgid();
   static const int kClientMsgIdFieldNumber = 3;
@@ -1819,6 +2185,12 @@ class SendMsgStateResp : public ::google::protobuf::Message /* @@protoc_insertio
   ::google::protobuf::int64 servertime() const;
   void set_servertime(::google::protobuf::int64 value);
 
+  // int64 lasMsgId = 10;
+  void clear_lasmsgid();
+  static const int kLasMsgIdFieldNumber = 10;
+  ::google::protobuf::int64 lasmsgid() const;
+  void set_lasmsgid(::google::protobuf::int64 value);
+
   // int32 msgSeq = 8;
   void clear_msgseq();
   static const int kMsgSeqFieldNumber = 8;
@@ -1833,11 +2205,13 @@ class SendMsgStateResp : public ::google::protobuf::Message /* @@protoc_insertio
   mutable int _opmsgid_cached_byte_size_;
   ::google::protobuf::internal::ArenaStringPtr codemsg_;
   ::google::protobuf::internal::ArenaStringPtr nodeid_;
+  ::google::protobuf::internal::ArenaStringPtr extend_;
   ::google::protobuf::int64 clientmsgid_;
   ::google::protobuf::int32 code_;
   ::google::protobuf::int32 nodestarttime_;
   ::google::protobuf::int64 msgid_;
   ::google::protobuf::int64 servertime_;
+  ::google::protobuf::int64 lasmsgid_;
   ::google::protobuf::int32 msgseq_;
   mutable ::google::protobuf::internal::CachedSize _cached_size_;
   friend struct ::protobuf_client_2eproto::TableStruct;
@@ -1879,7 +2253,7 @@ class RecvMsgStateResp : public ::google::protobuf::Message /* @@protoc_insertio
                &_RecvMsgStateResp_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    10;
+    12;
 
   void Swap(RecvMsgStateResp* other);
   friend void swap(RecvMsgStateResp& a, RecvMsgStateResp& b) {
@@ -2011,7 +2385,7 @@ class PullUserOnlineInfoReq : public ::google::protobuf::Message /* @@protoc_ins
                &_PullUserOnlineInfoReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    11;
+    13;
 
   void Swap(PullUserOnlineInfoReq* other);
   friend void swap(PullUserOnlineInfoReq& a, PullUserOnlineInfoReq& b) {
@@ -2128,7 +2502,7 @@ class PullUserOnlineInfoResp : public ::google::protobuf::Message /* @@protoc_in
                &_PullUserOnlineInfoResp_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    12;
+    14;
 
   void Swap(PullUserOnlineInfoResp* other);
   friend void swap(PullUserOnlineInfoResp& a, PullUserOnlineInfoResp& b) {
@@ -2275,7 +2649,7 @@ class reportNoReadMsgSumReq : public ::google::protobuf::Message /* @@protoc_ins
                &_reportNoReadMsgSumReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    13;
+    15;
 
   void Swap(reportNoReadMsgSumReq* other);
   friend void swap(reportNoReadMsgSumReq& a, reportNoReadMsgSumReq& b) {
@@ -2385,7 +2759,7 @@ class reportNoReadMsgSumResp : public ::google::protobuf::Message /* @@protoc_in
                &_reportNoReadMsgSumResp_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    14;
+    16;
 
   void Swap(reportNoReadMsgSumResp* other);
   friend void swap(reportNoReadMsgSumResp& a, reportNoReadMsgSumResp& b) {
@@ -2503,7 +2877,7 @@ class sendInputStateReq : public ::google::protobuf::Message /* @@protoc_inserti
                &_sendInputStateReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    15;
+    17;
 
   void Swap(sendInputStateReq* other);
   friend void swap(sendInputStateReq& a, sendInputStateReq& b) {
@@ -2642,7 +3016,7 @@ class sendInputStateResp : public ::google::protobuf::Message /* @@protoc_insert
                &_sendInputStateResp_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    16;
+    18;
 
   void Swap(sendInputStateResp* other);
   friend void swap(sendInputStateResp& a, sendInputStateResp& b) {
@@ -2760,7 +3134,7 @@ class recvInputStateReq : public ::google::protobuf::Message /* @@protoc_inserti
                &_recvInputStateReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    17;
+    19;
 
   void Swap(recvInputStateReq* other);
   friend void swap(recvInputStateReq& a, recvInputStateReq& b) {
@@ -2899,7 +3273,7 @@ class recvInputStateResp : public ::google::protobuf::Message /* @@protoc_insert
                &_recvInputStateResp_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    18;
+    20;
 
   void Swap(recvInputStateResp* other);
   friend void swap(recvInputStateResp& a, recvInputStateResp& b) {
@@ -3017,7 +3391,7 @@ class MsgStatus : public ::google::protobuf::Message /* @@protoc_insertion_point
                &_MsgStatus_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    19;
+    21;
 
   void Swap(MsgStatus* other);
   friend void swap(MsgStatus& a, MsgStatus& b) {
@@ -3127,7 +3501,7 @@ class BatchSendMsgStateReq : public ::google::protobuf::Message /* @@protoc_inse
                &_BatchSendMsgStateReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    20;
+    22;
 
   void Swap(BatchSendMsgStateReq* other);
   friend void swap(BatchSendMsgStateReq& a, BatchSendMsgStateReq& b) {
@@ -3293,7 +3667,7 @@ class BatchSendMsgStateResp : public ::google::protobuf::Message /* @@protoc_ins
                &_BatchSendMsgStateResp_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    21;
+    23;
 
   void Swap(BatchSendMsgStateResp* other);
   friend void swap(BatchSendMsgStateResp& a, BatchSendMsgStateResp& b) {
@@ -3467,7 +3841,7 @@ class BatchRecvMsgStateResp : public ::google::protobuf::Message /* @@protoc_ins
                &_BatchRecvMsgStateResp_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    22;
+    24;
 
   void Swap(BatchRecvMsgStateResp* other);
   friend void swap(BatchRecvMsgStateResp& a, BatchRecvMsgStateResp& b) {
@@ -3599,7 +3973,7 @@ class PushFriendStatusReq : public ::google::protobuf::Message /* @@protoc_inser
                &_PushFriendStatusReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    23;
+    25;
 
   void Swap(PushFriendStatusReq* other);
   friend void swap(PushFriendStatusReq& a, PushFriendStatusReq& b) {
@@ -3717,7 +4091,7 @@ class PushFriendStatusResp : public ::google::protobuf::Message /* @@protoc_inse
                &_PushFriendStatusResp_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    24;
+    26;
 
   void Swap(PushFriendStatusResp* other);
   friend void swap(PushFriendStatusResp& a, PushFriendStatusResp& b) {
@@ -3835,7 +4209,7 @@ class SendSubscribeReq : public ::google::protobuf::Message /* @@protoc_insertio
                &_SendSubscribeReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    25;
+    27;
 
   void Swap(SendSubscribeReq* other);
   friend void swap(SendSubscribeReq& a, SendSubscribeReq& b) {
@@ -3967,7 +4341,7 @@ class SendSubscribeResp : public ::google::protobuf::Message /* @@protoc_inserti
                &_SendSubscribeResp_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    26;
+    28;
 
   void Swap(SendSubscribeResp* other);
   friend void swap(SendSubscribeResp& a, SendSubscribeResp& b) {
@@ -4107,7 +4481,7 @@ class PushSubscribeReq : public ::google::protobuf::Message /* @@protoc_insertio
                &_PushSubscribeReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    27;
+    29;
 
   void Swap(PushSubscribeReq* other);
   friend void swap(PushSubscribeReq& a, PushSubscribeReq& b) {
@@ -4232,7 +4606,7 @@ class PushSubscribeResp : public ::google::protobuf::Message /* @@protoc_inserti
                &_PushSubscribeResp_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    28;
+    30;
 
   void Swap(PushSubscribeResp* other);
   friend void swap(PushSubscribeResp& a, PushSubscribeResp& b) {
@@ -4350,7 +4724,7 @@ class PullGroupOnlineInfoReq : public ::google::protobuf::Message /* @@protoc_in
                &_PullGroupOnlineInfoReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    29;
+    31;
 
   void Swap(PullGroupOnlineInfoReq* other);
   friend void swap(PullGroupOnlineInfoReq& a, PullGroupOnlineInfoReq& b) {
@@ -4474,7 +4848,7 @@ class PullGroupOnlineInfoResp : public ::google::protobuf::Message /* @@protoc_i
                &_PullGroupOnlineInfoResp_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    30;
+    32;
 
   void Swap(PullGroupOnlineInfoResp* other);
   friend void swap(PullGroupOnlineInfoResp& a, PullGroupOnlineInfoResp& b) {
@@ -6091,6 +6465,391 @@ inline void PushNoticeResp::set_msgid(::google::protobuf::int64 value) {
 
 // -------------------------------------------------------------------
 
+// ClientNoticeReq
+
+// int64 fromId = 1;
+inline void ClientNoticeReq::clear_fromid() {
+  fromid_ = GOOGLE_LONGLONG(0);
+}
+inline ::google::protobuf::int64 ClientNoticeReq::fromid() const {
+  // @@protoc_insertion_point(field_get:im_client.ClientNoticeReq.fromId)
+  return fromid_;
+}
+inline void ClientNoticeReq::set_fromid(::google::protobuf::int64 value) {
+  
+  fromid_ = value;
+  // @@protoc_insertion_point(field_set:im_client.ClientNoticeReq.fromId)
+}
+
+// string fromNickName = 2;
+inline void ClientNoticeReq::clear_fromnickname() {
+  fromnickname_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline const ::std::string& ClientNoticeReq::fromnickname() const {
+  // @@protoc_insertion_point(field_get:im_client.ClientNoticeReq.fromNickName)
+  return fromnickname_.GetNoArena();
+}
+inline void ClientNoticeReq::set_fromnickname(const ::std::string& value) {
+  
+  fromnickname_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:im_client.ClientNoticeReq.fromNickName)
+}
+#if LANG_CXX11
+inline void ClientNoticeReq::set_fromnickname(::std::string&& value) {
+  
+  fromnickname_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:im_client.ClientNoticeReq.fromNickName)
+}
+#endif
+inline void ClientNoticeReq::set_fromnickname(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  fromnickname_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:im_client.ClientNoticeReq.fromNickName)
+}
+inline void ClientNoticeReq::set_fromnickname(const char* value, size_t size) {
+  
+  fromnickname_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:im_client.ClientNoticeReq.fromNickName)
+}
+inline ::std::string* ClientNoticeReq::mutable_fromnickname() {
+  
+  // @@protoc_insertion_point(field_mutable:im_client.ClientNoticeReq.fromNickName)
+  return fromnickname_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* ClientNoticeReq::release_fromnickname() {
+  // @@protoc_insertion_point(field_release:im_client.ClientNoticeReq.fromNickName)
+  
+  return fromnickname_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void ClientNoticeReq::set_allocated_fromnickname(::std::string* fromnickname) {
+  if (fromnickname != NULL) {
+    
+  } else {
+    
+  }
+  fromnickname_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), fromnickname);
+  // @@protoc_insertion_point(field_set_allocated:im_client.ClientNoticeReq.fromNickName)
+}
+
+// string fromHeadImg = 3;
+inline void ClientNoticeReq::clear_fromheadimg() {
+  fromheadimg_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline const ::std::string& ClientNoticeReq::fromheadimg() const {
+  // @@protoc_insertion_point(field_get:im_client.ClientNoticeReq.fromHeadImg)
+  return fromheadimg_.GetNoArena();
+}
+inline void ClientNoticeReq::set_fromheadimg(const ::std::string& value) {
+  
+  fromheadimg_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:im_client.ClientNoticeReq.fromHeadImg)
+}
+#if LANG_CXX11
+inline void ClientNoticeReq::set_fromheadimg(::std::string&& value) {
+  
+  fromheadimg_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:im_client.ClientNoticeReq.fromHeadImg)
+}
+#endif
+inline void ClientNoticeReq::set_fromheadimg(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  fromheadimg_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:im_client.ClientNoticeReq.fromHeadImg)
+}
+inline void ClientNoticeReq::set_fromheadimg(const char* value, size_t size) {
+  
+  fromheadimg_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:im_client.ClientNoticeReq.fromHeadImg)
+}
+inline ::std::string* ClientNoticeReq::mutable_fromheadimg() {
+  
+  // @@protoc_insertion_point(field_mutable:im_client.ClientNoticeReq.fromHeadImg)
+  return fromheadimg_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* ClientNoticeReq::release_fromheadimg() {
+  // @@protoc_insertion_point(field_release:im_client.ClientNoticeReq.fromHeadImg)
+  
+  return fromheadimg_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void ClientNoticeReq::set_allocated_fromheadimg(::std::string* fromheadimg) {
+  if (fromheadimg != NULL) {
+    
+  } else {
+    
+  }
+  fromheadimg_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), fromheadimg);
+  // @@protoc_insertion_point(field_set_allocated:im_client.ClientNoticeReq.fromHeadImg)
+}
+
+// int64 dstId = 4;
+inline void ClientNoticeReq::clear_dstid() {
+  dstid_ = GOOGLE_LONGLONG(0);
+}
+inline ::google::protobuf::int64 ClientNoticeReq::dstid() const {
+  // @@protoc_insertion_point(field_get:im_client.ClientNoticeReq.dstId)
+  return dstid_;
+}
+inline void ClientNoticeReq::set_dstid(::google::protobuf::int64 value) {
+  
+  dstid_ = value;
+  // @@protoc_insertion_point(field_set:im_client.ClientNoticeReq.dstId)
+}
+
+// int32 noticeType = 5;
+inline void ClientNoticeReq::clear_noticetype() {
+  noticetype_ = 0;
+}
+inline ::google::protobuf::int32 ClientNoticeReq::noticetype() const {
+  // @@protoc_insertion_point(field_get:im_client.ClientNoticeReq.noticeType)
+  return noticetype_;
+}
+inline void ClientNoticeReq::set_noticetype(::google::protobuf::int32 value) {
+  
+  noticetype_ = value;
+  // @@protoc_insertion_point(field_set:im_client.ClientNoticeReq.noticeType)
+}
+
+// string msg = 6;
+inline void ClientNoticeReq::clear_msg() {
+  msg_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline const ::std::string& ClientNoticeReq::msg() const {
+  // @@protoc_insertion_point(field_get:im_client.ClientNoticeReq.msg)
+  return msg_.GetNoArena();
+}
+inline void ClientNoticeReq::set_msg(const ::std::string& value) {
+  
+  msg_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:im_client.ClientNoticeReq.msg)
+}
+#if LANG_CXX11
+inline void ClientNoticeReq::set_msg(::std::string&& value) {
+  
+  msg_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:im_client.ClientNoticeReq.msg)
+}
+#endif
+inline void ClientNoticeReq::set_msg(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  msg_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:im_client.ClientNoticeReq.msg)
+}
+inline void ClientNoticeReq::set_msg(const char* value, size_t size) {
+  
+  msg_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:im_client.ClientNoticeReq.msg)
+}
+inline ::std::string* ClientNoticeReq::mutable_msg() {
+  
+  // @@protoc_insertion_point(field_mutable:im_client.ClientNoticeReq.msg)
+  return msg_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* ClientNoticeReq::release_msg() {
+  // @@protoc_insertion_point(field_release:im_client.ClientNoticeReq.msg)
+  
+  return msg_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void ClientNoticeReq::set_allocated_msg(::std::string* msg) {
+  if (msg != NULL) {
+    
+  } else {
+    
+  }
+  msg_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), msg);
+  // @@protoc_insertion_point(field_set_allocated:im_client.ClientNoticeReq.msg)
+}
+
+// -------------------------------------------------------------------
+
+// ClientNoticeResp
+
+// int32 code = 1;
+inline void ClientNoticeResp::clear_code() {
+  code_ = 0;
+}
+inline ::google::protobuf::int32 ClientNoticeResp::code() const {
+  // @@protoc_insertion_point(field_get:im_client.ClientNoticeResp.code)
+  return code_;
+}
+inline void ClientNoticeResp::set_code(::google::protobuf::int32 value) {
+  
+  code_ = value;
+  // @@protoc_insertion_point(field_set:im_client.ClientNoticeResp.code)
+}
+
+// string codeMsg = 2;
+inline void ClientNoticeResp::clear_codemsg() {
+  codemsg_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline const ::std::string& ClientNoticeResp::codemsg() const {
+  // @@protoc_insertion_point(field_get:im_client.ClientNoticeResp.codeMsg)
+  return codemsg_.GetNoArena();
+}
+inline void ClientNoticeResp::set_codemsg(const ::std::string& value) {
+  
+  codemsg_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:im_client.ClientNoticeResp.codeMsg)
+}
+#if LANG_CXX11
+inline void ClientNoticeResp::set_codemsg(::std::string&& value) {
+  
+  codemsg_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:im_client.ClientNoticeResp.codeMsg)
+}
+#endif
+inline void ClientNoticeResp::set_codemsg(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  codemsg_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:im_client.ClientNoticeResp.codeMsg)
+}
+inline void ClientNoticeResp::set_codemsg(const char* value, size_t size) {
+  
+  codemsg_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:im_client.ClientNoticeResp.codeMsg)
+}
+inline ::std::string* ClientNoticeResp::mutable_codemsg() {
+  
+  // @@protoc_insertion_point(field_mutable:im_client.ClientNoticeResp.codeMsg)
+  return codemsg_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* ClientNoticeResp::release_codemsg() {
+  // @@protoc_insertion_point(field_release:im_client.ClientNoticeResp.codeMsg)
+  
+  return codemsg_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void ClientNoticeResp::set_allocated_codemsg(::std::string* codemsg) {
+  if (codemsg != NULL) {
+    
+  } else {
+    
+  }
+  codemsg_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), codemsg);
+  // @@protoc_insertion_point(field_set_allocated:im_client.ClientNoticeResp.codeMsg)
+}
+
+// int64 msgId = 3;
+inline void ClientNoticeResp::clear_msgid() {
+  msgid_ = GOOGLE_LONGLONG(0);
+}
+inline ::google::protobuf::int64 ClientNoticeResp::msgid() const {
+  // @@protoc_insertion_point(field_get:im_client.ClientNoticeResp.msgId)
+  return msgid_;
+}
+inline void ClientNoticeResp::set_msgid(::google::protobuf::int64 value) {
+  
+  msgid_ = value;
+  // @@protoc_insertion_point(field_set:im_client.ClientNoticeResp.msgId)
+}
+
+// int64 sendTime = 4;
+inline void ClientNoticeResp::clear_sendtime() {
+  sendtime_ = GOOGLE_LONGLONG(0);
+}
+inline ::google::protobuf::int64 ClientNoticeResp::sendtime() const {
+  // @@protoc_insertion_point(field_get:im_client.ClientNoticeResp.sendTime)
+  return sendtime_;
+}
+inline void ClientNoticeResp::set_sendtime(::google::protobuf::int64 value) {
+  
+  sendtime_ = value;
+  // @@protoc_insertion_point(field_set:im_client.ClientNoticeResp.sendTime)
+}
+
+// int32 nodeStartTime = 5;
+inline void ClientNoticeResp::clear_nodestarttime() {
+  nodestarttime_ = 0;
+}
+inline ::google::protobuf::int32 ClientNoticeResp::nodestarttime() const {
+  // @@protoc_insertion_point(field_get:im_client.ClientNoticeResp.nodeStartTime)
+  return nodestarttime_;
+}
+inline void ClientNoticeResp::set_nodestarttime(::google::protobuf::int32 value) {
+  
+  nodestarttime_ = value;
+  // @@protoc_insertion_point(field_set:im_client.ClientNoticeResp.nodeStartTime)
+}
+
+// string nodeId = 6;
+inline void ClientNoticeResp::clear_nodeid() {
+  nodeid_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline const ::std::string& ClientNoticeResp::nodeid() const {
+  // @@protoc_insertion_point(field_get:im_client.ClientNoticeResp.nodeId)
+  return nodeid_.GetNoArena();
+}
+inline void ClientNoticeResp::set_nodeid(const ::std::string& value) {
+  
+  nodeid_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:im_client.ClientNoticeResp.nodeId)
+}
+#if LANG_CXX11
+inline void ClientNoticeResp::set_nodeid(::std::string&& value) {
+  
+  nodeid_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:im_client.ClientNoticeResp.nodeId)
+}
+#endif
+inline void ClientNoticeResp::set_nodeid(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  nodeid_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:im_client.ClientNoticeResp.nodeId)
+}
+inline void ClientNoticeResp::set_nodeid(const char* value, size_t size) {
+  
+  nodeid_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:im_client.ClientNoticeResp.nodeId)
+}
+inline ::std::string* ClientNoticeResp::mutable_nodeid() {
+  
+  // @@protoc_insertion_point(field_mutable:im_client.ClientNoticeResp.nodeId)
+  return nodeid_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* ClientNoticeResp::release_nodeid() {
+  // @@protoc_insertion_point(field_release:im_client.ClientNoticeResp.nodeId)
+  
+  return nodeid_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void ClientNoticeResp::set_allocated_nodeid(::std::string* nodeid) {
+  if (nodeid != NULL) {
+    
+  } else {
+    
+  }
+  nodeid_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), nodeid);
+  // @@protoc_insertion_point(field_set_allocated:im_client.ClientNoticeResp.nodeId)
+}
+
+// int32 msgSeq = 7;
+inline void ClientNoticeResp::clear_msgseq() {
+  msgseq_ = 0;
+}
+inline ::google::protobuf::int32 ClientNoticeResp::msgseq() const {
+  // @@protoc_insertion_point(field_get:im_client.ClientNoticeResp.msgSeq)
+  return msgseq_;
+}
+inline void ClientNoticeResp::set_msgseq(::google::protobuf::int32 value) {
+  
+  msgseq_ = value;
+  // @@protoc_insertion_point(field_set:im_client.ClientNoticeResp.msgSeq)
+}
+
+// -------------------------------------------------------------------
+
 // SendMsgStateReq
 
 // int64 fromId = 1;
@@ -6286,6 +7045,48 @@ inline void SendMsgStateReq::set_sendtime(::google::protobuf::int64 value) {
   
   sendtime_ = value;
   // @@protoc_insertion_point(field_set:im_client.SendMsgStateReq.sendTime)
+}
+
+// int32 msgUnReadedNums = 11;
+inline void SendMsgStateReq::clear_msgunreadednums() {
+  msgunreadednums_ = 0;
+}
+inline ::google::protobuf::int32 SendMsgStateReq::msgunreadednums() const {
+  // @@protoc_insertion_point(field_get:im_client.SendMsgStateReq.msgUnReadedNums)
+  return msgunreadednums_;
+}
+inline void SendMsgStateReq::set_msgunreadednums(::google::protobuf::int32 value) {
+  
+  msgunreadednums_ = value;
+  // @@protoc_insertion_point(field_set:im_client.SendMsgStateReq.msgUnReadedNums)
+}
+
+// int64 lasMsgId = 12;
+inline void SendMsgStateReq::clear_lasmsgid() {
+  lasmsgid_ = GOOGLE_LONGLONG(0);
+}
+inline ::google::protobuf::int64 SendMsgStateReq::lasmsgid() const {
+  // @@protoc_insertion_point(field_get:im_client.SendMsgStateReq.lasMsgId)
+  return lasmsgid_;
+}
+inline void SendMsgStateReq::set_lasmsgid(::google::protobuf::int64 value) {
+  
+  lasmsgid_ = value;
+  // @@protoc_insertion_point(field_set:im_client.SendMsgStateReq.lasMsgId)
+}
+
+// int32 msgNotifyReadedNums = 13;
+inline void SendMsgStateReq::clear_msgnotifyreadednums() {
+  msgnotifyreadednums_ = 0;
+}
+inline ::google::protobuf::int32 SendMsgStateReq::msgnotifyreadednums() const {
+  // @@protoc_insertion_point(field_get:im_client.SendMsgStateReq.msgNotifyReadedNums)
+  return msgnotifyreadednums_;
+}
+inline void SendMsgStateReq::set_msgnotifyreadednums(::google::protobuf::int32 value) {
+  
+  msgnotifyreadednums_ = value;
+  // @@protoc_insertion_point(field_set:im_client.SendMsgStateReq.msgNotifyReadedNums)
 }
 
 // -------------------------------------------------------------------
@@ -6510,6 +7311,73 @@ inline void SendMsgStateResp::set_servertime(::google::protobuf::int64 value) {
   
   servertime_ = value;
   // @@protoc_insertion_point(field_set:im_client.SendMsgStateResp.serverTime)
+}
+
+// int64 lasMsgId = 10;
+inline void SendMsgStateResp::clear_lasmsgid() {
+  lasmsgid_ = GOOGLE_LONGLONG(0);
+}
+inline ::google::protobuf::int64 SendMsgStateResp::lasmsgid() const {
+  // @@protoc_insertion_point(field_get:im_client.SendMsgStateResp.lasMsgId)
+  return lasmsgid_;
+}
+inline void SendMsgStateResp::set_lasmsgid(::google::protobuf::int64 value) {
+  
+  lasmsgid_ = value;
+  // @@protoc_insertion_point(field_set:im_client.SendMsgStateResp.lasMsgId)
+}
+
+// string extend = 11;
+inline void SendMsgStateResp::clear_extend() {
+  extend_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline const ::std::string& SendMsgStateResp::extend() const {
+  // @@protoc_insertion_point(field_get:im_client.SendMsgStateResp.extend)
+  return extend_.GetNoArena();
+}
+inline void SendMsgStateResp::set_extend(const ::std::string& value) {
+  
+  extend_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:im_client.SendMsgStateResp.extend)
+}
+#if LANG_CXX11
+inline void SendMsgStateResp::set_extend(::std::string&& value) {
+  
+  extend_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:im_client.SendMsgStateResp.extend)
+}
+#endif
+inline void SendMsgStateResp::set_extend(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  extend_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:im_client.SendMsgStateResp.extend)
+}
+inline void SendMsgStateResp::set_extend(const char* value, size_t size) {
+  
+  extend_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:im_client.SendMsgStateResp.extend)
+}
+inline ::std::string* SendMsgStateResp::mutable_extend() {
+  
+  // @@protoc_insertion_point(field_mutable:im_client.SendMsgStateResp.extend)
+  return extend_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* SendMsgStateResp::release_extend() {
+  // @@protoc_insertion_point(field_release:im_client.SendMsgStateResp.extend)
+  
+  return extend_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void SendMsgStateResp::set_allocated_extend(::std::string* extend) {
+  if (extend != NULL) {
+    
+  } else {
+    
+  }
+  extend_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), extend);
+  // @@protoc_insertion_point(field_set_allocated:im_client.SendMsgStateResp.extend)
 }
 
 // -------------------------------------------------------------------
@@ -8546,6 +9414,10 @@ inline void PullGroupOnlineInfoResp::set_allocated_msg(::std::string* msg) {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------
