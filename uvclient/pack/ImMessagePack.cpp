@@ -1,6 +1,5 @@
 #include "ImMessagePack.h"
 #include "encrypt_crypto.h"
-extern std::map<uv_tcp_t*, uv_connect_t*> g_mapSocketConn;
 ImMessagePack::ImMessagePack(RingBuffer* recvRb, void *recvMem, RingBuffer* sendRb, void* sendMem, uv_async_t* uvAsyn, int index):
     Pack(recvRb, recvMem, sendRb, sendMem, uvAsyn, index)
 {
