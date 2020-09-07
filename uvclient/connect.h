@@ -21,7 +21,9 @@ namespace uvconn
     void close_cb(uv_handle_t* handle);
     void write_cb(uv_write_t* req, int status);
     void uv_async_call(uv_async_t* handle);
+    
     void uv_personal_heatBeat_timer_callback(uv_timer_t* handle);
+    void uv_msg_timer_callback(uv_timer_t* handle);
 };
 
 #endif//_UVCONN_H

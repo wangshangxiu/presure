@@ -68,33 +68,7 @@ void uv_creatconn_timer_callback(uv_timer_t* handle){
         });
     }
 }
-/*TODO
-void uv_msg_timer_callback(uv_timer_t* handle)
-{
-    LOG4_INFO("-------uv_msg_timer_callback-------");
-    static int ibatch = 100;
-    std::list<uv_tcp_t*>& pSocketList = *(std::list<uv_tcp_t*>*)handle->data;
-    if(pSocketList.size() > 0)
-    {
-        LOG4_INFO("uv_msg_timer_callback() pSocketList = %d",pSocketList.size());
-        for(const auto & stream:pSocketList)
-        {
-            const auto& iter = g_mapSocketConn.find((uv_tcp_t*)stream);
-            if(iter != g_mapSocketConn.end())
-            {
-                uv_connect_t* conn = (uv_connect_t*)iter->second;
-                if(conn)
-                {
-                    //发单聊消息
-                    MsgBody msgBody;
-                    ImMessagePack::MsgChatReq((uv_connect_t* )conn, msgBody);
-                    Pack::SendMsg((uv_connect_t*)conn, 4001, msgBody);
-                }
-            }
-        }
-    }
-}
-**/
+
 void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
 {
     LOG4_INFO("---------uv_logintask_statistics_timer_callback-------");

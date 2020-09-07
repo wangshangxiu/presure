@@ -280,11 +280,22 @@ void uv_async_call(uv_async_t* handle)
                             UserInfo* pUserInfo = (UserInfo*)p_ctx->userInfo;
                             if(pUserInfo)
                             {
-                                uv_timer_t*  heatBeatTimer= new uv_timer_t; 
-                                heatBeatTimer->data = (void*)p_ctx->userInfo;
-                                uv_timer_init(uv_default_loop(), heatBeatTimer);
-                                uv_timer_start(heatBeatTimer, uv_personal_heatBeat_timer_callback, HEARBEAT_PERIO, HEARBEAT_PERIO);//next loop 执行第一次，周期3.5min,心跳发送定时器
-                                pUserInfo->timer = heatBeatTimer;
+                                //心跳定时器
+                                {
+                                    uv_timer_t*  heatBeatTimer= new uv_timer_t; 
+                                    heatBeatTimer->data = (void*)p_ctx->userInfo;
+                                    uv_timer_init(uv_default_loop(), heatBeatTimer);
+                                    uv_timer_start(heatBeatTimer, uv_personal_heatBeat_timer_callback, HEARBEAT_PERIO, HEARBEAT_PERIO);//3.5min执行第一次，周期3.5min,心跳发送定时器
+                                    pUserInfo->timer = heatBeatTimer;
+                                }
+                                //单聊消息定时器
+                                {
+                                    uv_timer_t*  msgTimer= new uv_timer_t; 
+                                    msgTimer->data = (void*)p_ctx->userInfo;
+                                    uv_timer_init(uv_default_loop(), msgTimer);
+                                    uv_timer_start(msgTimer, uv_msg_timer_callback, 0, 1000);//next loop 执行第一次，周期1s,心跳发送定时器s
+                                    pUserInfo->msgTimer = msgTimer;
+                                }
                             }
                         }
                     }
@@ -331,6 +342,28 @@ void uv_personal_heatBeat_timer_callback(uv_timer_t* handle)
         buf.len = sizeof(tagAppMsgHead); 
         uv_write_t *wReq = new uv_write_t;
         uv_write(wReq, (uv_stream_t*)stream, &buf, 1, write_cb);
+    }
+}
+
+/*TODO**/
+void uv_msg_timer_callback(uv_timer_t* handle)
+{
+    LOG4_INFO("-------uv_msg_timer_callback-------");
+    UserInfo* pUserInfo = (UserInfo*)handle->data;
+    const uv_stream_t* stream = (uv_stream_t*)pUserInfo->conn;
+    auto iter = g_mapConnCache.find((uv_tcp_t*)stream);
+    if(iter == g_mapConnCache.end())
+    {
+        LOG4_ERROR("stream(%p) no exist, maybe have recycle", stream);
+        //需要再用时，连接不在了需要回收资源吗
+        return;
+    }
+    else
+    {
+        //发单聊消息
+        MsgBody msgBody;
+        ImMessagePack::MsgChatReq(*pUserInfo, msgBody);
+        Pack::SendMsg((uv_tcp_t*)stream, 4001, msgBody.SerializeAsString());
     }
 }
 
