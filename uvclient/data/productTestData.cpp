@@ -71,14 +71,14 @@ int main(int argc, char* argv[])
     unsigned long long timeNow = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     struct stat buf;
     bool bcsvExist = false;
-    if(stat("./id.csv", &buf) ==0)
+    if(stat("./tmp_id.csv", &buf) ==0)
     {
         bcsvExist = true;
-        printf("file id.csv exist\n");
+        printf("file tmp_id.csv exist\n");
     }
-    std::ofstream csvFile("./id.csv" , std::ios::out| std::ios::app);
-    std::ofstream insRedisDataFile("./ins_redis_data.txt", std::ios::out | std::ios::app);
-    std::ofstream set0RedisDataFile("./set_0_redis_data.txt", std::ios::out | std::ios::app);
+    std::ofstream csvFile("./tmp_id.csv" , std::ios::out| std::ios::app);
+    std::ofstream insRedisDataFile("./tmp_ins_redis_data.txt", std::ios::out | std::ios::app);
+    std::ofstream set0RedisDataFile("./tmp_set_0_redis_data.txt", std::ios::out | std::ios::app);
     if(!bcsvExist)
     {
         csvFile << "id, dev_id, token" << "\n";
@@ -88,13 +88,16 @@ int main(int argc, char* argv[])
     {
        unsigned long long id =  GetUniqueId_MS(254, 64);
        std::string stRand = GetRandStr(32, true);
-    //"4:1:im:token:userid:1275006717478846466:deviceid:5EDF8352-7BB2-4A8A-9BE4-812F1F053C2B"
+    
        char csvBuf[128] = {0};
        snprintf(csvBuf, sizeof(csvBuf), "%ld, %s, %s", id, stRand.c_str(), stRand.c_str());
 
+       //hset 1:1:im:token::deviceid:5EDF8352-7BB2-4A8A-9BE4-812F1F053C2B  1275006717478846466 5EDF8352-7BB2-4A8A-9BE4-812F1F053C2B //设置登录token ,hash结构
        char insRedisBuf[256] ={0};
-       snprintf(insRedisBuf, sizeof(insRedisBuf), "set 4:1:im:token:userid:%ld:deviceid:%s %s", id, stRand.c_str(), stRand.c_str());
+       snprintf(insRedisBuf, sizeof(insRedisBuf), "hset 1:1:im:token:deviceid:%s %ld %s", stRand.c_str(), id,  stRand.c_str());
        
+
+       //hset 1:2:im:status:userid:1275006717478846466 loginseq:5EDF8352-7BB2-4A8A-9BE4-812F1F053C2B 0 //把登录态的loginSeq归零
        char set0Buf[256] ={0};
        snprintf(set0Buf, sizeof(set0Buf), "hset 1:2:im:status:userid:%ld loginseq:%s 0", id, stRand.c_str());
 

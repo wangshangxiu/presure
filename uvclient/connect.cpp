@@ -288,14 +288,14 @@ void uv_async_call(uv_async_t* handle)
                                     uv_timer_start(heatBeatTimer, uv_personal_heatBeat_timer_callback, HEARBEAT_PERIO, HEARBEAT_PERIO);//3.5min执行第一次，周期3.5min,心跳发送定时器
                                     pUserInfo->timer = heatBeatTimer;
                                 }
-                                //单聊消息定时器
-                                {
-                                    uv_timer_t*  msgTimer= new uv_timer_t; 
-                                    msgTimer->data = (void*)p_ctx->userInfo;
-                                    uv_timer_init(uv_default_loop(), msgTimer);
-                                    uv_timer_start(msgTimer, uv_msg_timer_callback, 0, 1000);//next loop 执行第一次，周期1s,心跳发送定时器s
-                                    pUserInfo->msgTimer = msgTimer;
-                                }
+                                // //单聊消息定时器
+                                // {
+                                //     uv_timer_t*  msgTimer= new uv_timer_t; 
+                                //     msgTimer->data = (void*)p_ctx->userInfo;
+                                //     uv_timer_init(uv_default_loop(), msgTimer);
+                                //     uv_timer_start(msgTimer, uv_msg_timer_callback, 0, 1000);//next loop 执行第一次，周期1s,心跳发送定时器s
+                                //     pUserInfo->msgTimer = msgTimer;
+                                // }
                             }
                         }
                     }

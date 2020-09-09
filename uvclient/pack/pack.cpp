@@ -100,7 +100,7 @@ void Pack::DoTask(const ImPack& pack)
 
 void Pack::SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool bEncryt)
 {
-    LOG4_INFO("-------SendMsg---------");
+    LOG4_INFO("-------SendMsg, strMsgBody len(%d), bEncrypt(%d)---------", msgBody.size(), bEncryt);
     uv_write_t *wReq = new uv_write_t;
     uv_buf_t bufArray[2] = {{0, 0},{0, 0}};
     auto iter = uvconn::g_mapConnCache.find((uv_tcp_t*)handle);//判断连接是否还在
@@ -113,7 +113,7 @@ void Pack::SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool
     UserInfo *pUserInfo = (UserInfo*)handle->data;
     tagAppMsgHead head;
     std::string data;
-    if(bEncryt)
+    if(bEncryt)//msgBody被加密
     {
         if(pUserInfo)
         {
@@ -156,8 +156,16 @@ void Pack::SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool
     head.seq = htonl(head.seq);
     bufArray[0].base = (char*)&head;
     bufArray[0].len = sizeof(tagAppMsgHead);
-    bufArray[1].base = (char*)data.c_str();
-    bufArray[1].len = data.size(); 
+    if(bEncryt)//msgBody被加密
+    {
+        bufArray[1].base = (char*)data.c_str();
+        bufArray[1].len = data.size(); 
+    }
+    else
+    {
+        bufArray[1].base = (char*)msgBody.c_str();
+        bufArray[1].len = msgBody.size(); 
+    }
     uv_write(wReq, (uv_stream_t*)handle, bufArray, 2, [](uv_write_t* req, int status){
         if(status ==0) 
         {
