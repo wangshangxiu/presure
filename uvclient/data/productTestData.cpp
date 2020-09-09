@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
 {
     if(argc < 2) 
     {
-        printf("parameters too few...\n");
+        printf("parameters too few..., usage: %s smpleNums(10000)\n", argv[0]);
         return 0;   
 
     }
@@ -71,14 +71,14 @@ int main(int argc, char* argv[])
     unsigned long long timeNow = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     struct stat buf;
     bool bcsvExist = false;
-    if(stat("./tmp_id.csv", &buf) ==0)
+    if(stat("./ id.csv", &buf) ==0)
     {
         bcsvExist = true;
-        printf("file tmp_id.csv exist\n");
+        printf("file  id.csv exist\n");
     }
-    std::ofstream csvFile("./tmp_id.csv" , std::ios::out| std::ios::app);
-    std::ofstream insRedisDataFile("./tmp_ins_redis_data.txt", std::ios::out | std::ios::app);
-    std::ofstream set0RedisDataFile("./tmp_set_0_redis_data.txt", std::ios::out | std::ios::app);
+    std::ofstream csvFile("./ id.csv" , std::ios::out| std::ios::app);
+    std::ofstream insRedisDataFile("./ins_redis_data.txt", std::ios::out | std::ios::app);
+    std::ofstream set0RedisDataFile("./set_0_redis_data.txt", std::ios::out | std::ios::app);
     if(!bcsvExist)
     {
         csvFile << "id, dev_id, token" << "\n";
