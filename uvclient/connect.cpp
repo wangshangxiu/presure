@@ -341,7 +341,7 @@ void uv_personal_heatBeat_timer_callback(uv_timer_t* handle)
         buf.base = (char*)&head;
         buf.len = sizeof(tagAppMsgHead); 
         uv_write_t *wReq = new uv_write_t;
-        wReq->data = stream;
+        wReq->data = (void*)stream;
         uv_write(wReq, (uv_stream_t*)stream, &buf, 1, write_cb);
     }
 }

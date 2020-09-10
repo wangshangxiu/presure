@@ -102,6 +102,7 @@ void Pack::SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool
 {
     LOG4_INFO("-------SendMsg on stream(%p), strMsgBody len(%d), bEncrypt(%d)---------",handle, msgBody.size(), bEncryt);
     uv_write_t *wReq = new uv_write_t;
+    wReq->data = handle;
     uv_buf_t bufArray[2] = {{0, 0},{0, 0}};
     auto iter = uvconn::g_mapConnCache.find((uv_tcp_t*)handle);//判断连接是否还在
     if(iter == uvconn::g_mapConnCache.end())
@@ -169,11 +170,11 @@ void Pack::SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool
     uv_write(wReq, (uv_stream_t*)handle, bufArray, 2, [](uv_write_t* req, int status){
         if(status ==0) 
         {
-            LOG4_INFO("write successfully on stream(%p), req=%p",handle, req);
+            LOG4_INFO("write successfully on stream(%p), req=%p",req->data, req);
         }
         else
         {
-            LOG4_INFO("write error on stream(%p), status= %d",handle, status);
+            LOG4_INFO("write error on stream(%p), status= %d",req->data, status);
         }
 
         if(req)
