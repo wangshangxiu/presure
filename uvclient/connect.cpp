@@ -220,11 +220,11 @@ void write_cb(uv_write_t* req, int status)
     if(status ==0) 
     {
 
-        LOG4_INFO("write successfully, req=%p",req);
+        LOG4_INFO("write successfully on stream(%p), req=%p", req->data, req);
     }
     else
     {
-        LOG4_INFO("write error, status= %d", status);
+        LOG4_INFO("write error on stream(%p), status= %d", req->data, status);
     }
 
     if(req)
@@ -341,6 +341,7 @@ void uv_personal_heatBeat_timer_callback(uv_timer_t* handle)
         buf.base = (char*)&head;
         buf.len = sizeof(tagAppMsgHead); 
         uv_write_t *wReq = new uv_write_t;
+        wReq->data = stream;
         uv_write(wReq, (uv_stream_t*)stream, &buf, 1, write_cb);
     }
 }

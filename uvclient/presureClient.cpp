@@ -49,8 +49,8 @@ void uv_creatconn_timer_callback(uv_timer_t* handle){
         int index = rand()%dstIpList.size();
         // uv_ip4_addr(dstIp.c_str(), dstPort, &dest);
         uv_ip4_addr(dstIpList[index].c_str(), dstPort, &dest);
-        LOG4_DEBUG("user(%ld) devid(%s) token(%s) start connect ...",
-            listUserInfo[userInfoListCounter].userId, listUserInfo[userInfoListCounter].devId.c_str(), listUserInfo[userInfoListCounter].authToken.c_str());
+        LOG4_DEBUG("user(%ld) devid(%s) token(%s) on stream(%p) start connect ...",
+            listUserInfo[userInfoListCounter].userId, listUserInfo[userInfoListCounter].devId.c_str(), listUserInfo[userInfoListCounter].authToken.c_str(), utcp);
         listUserInfo[userInfoListCounter].loginInfo.startConnectTime = globalFuncation::GetMicrosecond();
         userInfoListCounter++;
         uv_tcp_connect(uconn, utcp, (const struct sockaddr*)&dest, uvconn::on_connect);
