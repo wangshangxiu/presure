@@ -158,6 +158,21 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
             default:
                 break;
         }
+#if 1
+                CustomEvent event;
+                event.handle = pack.stream; 
+                event.userInfo = pUserInfo;//连接对应用户信息指针
+                event.istatus = status;
+                event.ieventType = CustomEvent::EVENT_LOGIN_FAILED;
+                if(m_sendRb->push(&event, sizeof(event), m_sendMem) == 0)//pack放到rb_recv, 能放下则放下
+                {
+                    LOG4_INFO("push CustomEvent of event.handle(%p) to ringbuffer, event.ieventType(%d), event.istatus(%d), rb_send(%p), p_send_mem(%p)",event.handle, event.ieventType, event.istatus ,  m_sendRb, m_sendMem);
+                }
+                else
+                {
+                    return;//m_sendRb满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
+                }
+#endif
     }
 }
 

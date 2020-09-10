@@ -269,7 +269,7 @@ void uv_async_call(uv_async_t* handle)
             CustomEvent *p_ctx = (CustomEvent*)rb_send[i]->peek(&len, 0, p_send_mem[i]);
             if(p_ctx)
             {
-                LOG4_INFO("uv_async_call pop CustomEvent from ringbuffer, event.handle(%p) event->ieventType(%d) event->istatus(%d), rb_send(%p), p_send_mem(%p)",
+                LOG4_INFO("uv_async_call pop CustomEvent from ringbuffer, event.stream(%p) event->ieventType(%d) event->istatus(%d), rb_send(%p), p_send_mem(%p)",
                     ((UserInfo*)p_ctx->userInfo)->conn, p_ctx->ieventType,  p_ctx->istatus , rb_send[i], p_send_mem[i]);
                 switch (p_ctx->ieventType) 
                 {
@@ -301,7 +301,8 @@ void uv_async_call(uv_async_t* handle)
                     }
                     break;
                 case CustomEvent::EVENT_LOGIN_FAILED:
-                
+                    exit(0);//直接退出,方便日志查看
+                    break;
                 default:
                     break;
                 }               
