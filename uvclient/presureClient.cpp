@@ -133,14 +133,22 @@ int main(int argc, char* argv[])
     //从文件加载用户数据
     std::string strSampleDataPath;
     std::string strSampleDataSize;
+    int sampleDataSize = 0;
     g_cfg.Get("user_data_path", strSampleDataPath);
     g_cfg.Get("sample_data_size", strSampleDataSize);
-    strSampleDataPath += "id_test_";
-    strSampleDataPath += strSampleDataSize;
-    strSampleDataPath +=".json";
-    if(!globalFuncation::LoadUserInfoFromFile(listUserInfo, strSampleDataPath))
+    g_cfg.Get("sample_data_total_size", sampleDataSize);
+    // strSampleDataPath += "id_test_";
+    // strSampleDataPath += strSampleDataSize;
+    // strSampleDataPath +=".json";
+    // if(!globalFuncation::LoadUserInfoFromJsonFile(listUserInfo, strSampleDataPath))
+    // {
+    //     LOG4_ERROR("load user.json error");
+    //     return 0;
+    // }
+    strSampleDataPath += "id.csv";
+    if(!globalFuncation::LoadUserInfoFromCVSFile(listUserInfo, strSampleDataPath, 0, sampleDataSize))
     {
-        LOG4_ERROR("load user.json error");
+        LOG4_ERROR("load id.cvs error");
         return 0;
     }
     LOG4_DEBUG("listUserInfo size(%d)", listUserInfo.size());

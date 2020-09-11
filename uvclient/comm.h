@@ -144,7 +144,9 @@ namespace globalFuncation
 {
 long long GetMicrosecond();
 bool LoadConfig(util::CJsonObject& oConf, const char* strConfFile);
-bool LoadUserInfoFromFile(std::vector<UserInfo>& userInfo, const std::string& strPath);
+//解析CSV比JSON要快多了
+bool LoadUserInfoFromJsonFile(std::vector<UserInfo>& userInfo, const std::string& strPath);
+bool LoadUserInfoFromCVSFile(std::vector<UserInfo>& userInfo, const std::string& strPath, int offset = 0, int smpleSize = 200000);
 void StringSplit(const std::string& strSrc, std::vector<std::string>& vec, char c= ':');
 };
 #endif//_COMM_H

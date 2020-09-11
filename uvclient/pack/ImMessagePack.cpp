@@ -85,7 +85,7 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
         return;
     }
     UserInfo* pUserInfo = (UserInfo*)pack.UserInfoPtr;
-    int status = ntohl(*(unsigned short*)(pack.packBuf + 14));//移动14个字节就是status
+    int status = ntohs(*(unsigned short*)(pack.packBuf + 14));//移动14个字节就是status
     if(status == 0)//成功的情况
     {
         if(pUserInfo)
