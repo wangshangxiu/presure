@@ -102,7 +102,7 @@ typedef struct {
     LoginInfo  loginInfo;//登录事务信息
     uv_timer_t *timer = nullptr;//用户心跳定时器
     uv_timer_t *msgTimer = nullptr;//消息定时器
-    const uv_tcp_t *conn = nullptr;//此用户使用的连接
+    const uv_tcp_t *conn = nullptr;//此用户使用的连接，这里不用负责内存回收
 
     void reCycleSource()
     {

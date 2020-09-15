@@ -5,7 +5,7 @@
 #include "client.pb.h"
 namespace uvconn
 {
-void *p_recv_mem = malloc(RB_SIZE);                     //writer:sockect线程；reader:业务线程  
+void *p_recv_mem = malloc(RB_SIZE);                     //writer:sockect线程,reader:业务线程  
 RingBuffer rb_recv(RB_SIZE, false, false);              //存放接收到的业务pack的lock-free缓冲
 void *p_send_mem[TASK_THREAD_NUM];                      //writer:业务线程, reader:sockect线程
 RingBuffer *rb_send[TASK_THREAD_NUM];                   //(RB_SIZE, false, false),多线程处理业务后要发包入缓冲，通知socket线程发送,有几个业务线程就有几个这样的rb
@@ -73,7 +73,7 @@ void alloc_buffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
                 LOG4_INFO("pBuf has free space");
                 buf->len = (TCP_BUFFER_LEN - pBuf->GetLength());//传入环形缓冲的最大空闲长度,环形缓冲是固定长非线程安全
             }
-            buf->base = (char*)&cacheBuf[0];//根据环形缓冲区的剩余空间，决定取多长的socket数据
+            buf->base = (char*)&cacheBuf[0];//根据环形缓冲区的剩余空间，决定取多长的socket数据到cacheBuf
         }
     }
 }
@@ -88,7 +88,6 @@ void echo_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
     }
     else
     {
-        //这里先解析buf，最后残余数据再放缓冲
         auto iter = g_mapConnCache.find((uv_tcp_t*)stream);
         if(iter == g_mapConnCache.end())
         {
@@ -98,7 +97,7 @@ void echo_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
         CircleBuffer<char>* pBuf = (CircleBuffer<char>*)iter->second;
         if(pBuf)
         {
-            if(pBuf->isEmpty())
+            if(pBuf->isEmpty()) //缓冲区为空，这里先解析buf，最后残余数据再放缓冲
             {
                 int leftLen = nread;//开始的剩余长度为这次从sockert读回来的数据
                 int offset = 0;
@@ -123,6 +122,7 @@ void echo_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
                             }
                             else
                             {
+                                LOG4_WARN("==========drop pack cmd(%d) on stream(%p)!!!", ntohl(*(unsigned int*)(pack.packBuf + 4)), pack.stream);
                                 delete []cbuf;//rb_recv满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
                                 return;
                             }
@@ -190,6 +190,7 @@ void on_parse_pack(const uv_stream_t* stream)
                     }
                     else
                     {
+                        LOG4_WARN("==========drop pack cmd(%d) on stream(%p)!!!", ntohl(*(unsigned int*)(pack.packBuf + 4)), pack.stream);
                         delete []buf;
                         return;//rb_recv满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
                     }
@@ -247,7 +248,7 @@ void close_cb(uv_handle_t* handle)
             delete (CircleBuffer<char>*)iter->second;
         }
         g_mapConnCache.erase((uv_tcp_t*)handle);
-        //连接绑定的用户的资源：心跳定时器，消息定时器...
+        //回收连接绑定的用户的资源：心跳定时器，消息定时器...
         UserInfo* pUserInfo = (UserInfo*)handle->data;
         if(pUserInfo) //UserInfo*
         {
@@ -286,7 +287,7 @@ void uv_async_call(uv_async_t* handle)
                                     heatBeatTimer->data = (void*)p_ctx->userInfo;
                                     uv_timer_init(uv_default_loop(), heatBeatTimer);
                                     uv_timer_start(heatBeatTimer, uv_personal_heatBeat_timer_callback, HEARBEAT_PERIO, HEARBEAT_PERIO);//3.5min执行第一次，周期3.5min,心跳发送定时器
-                                    pUserInfo->timer = heatBeatTimer;
+                                    pUserInfo->timer = heatBeatTimer; //方便后续回收
                                 }
                                 // //单聊消息定时器
                                 // {
