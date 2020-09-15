@@ -28,7 +28,8 @@ std::string dstIp;                                      //单个IP
 int dstPort = 0;                                        //端口
 
 //void (*uv_timer_cb)(uv_timer_t* handle);
-void uv_creatconn_timer_callback(uv_timer_t* handle){
+void uv_creatconn_timer_callback(uv_timer_t* handle)
+{
     LOG4_INFO("-------uv_creatconn_timer_callback-------");
     static int userInfoListCounter = 0;
     UTimerData* pUTimerData = (UTimerData*)handle->data;

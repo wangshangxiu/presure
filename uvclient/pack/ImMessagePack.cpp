@@ -61,7 +61,7 @@ void ImMessagePack::LoginReq(UserInfo& userInfo, MsgBody& msgBody)
                 loginReq.set_aesdata(strAesEncryptDest);
                 loginReq.set_rasversion(1.0);
                 msgBody.set_body(loginReq.SerializeAsString());
-                msgBody.set_targetid("");
+                // msgBody.set_targetid("");
             }
             else
             {
