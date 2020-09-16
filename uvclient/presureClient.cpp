@@ -158,11 +158,11 @@ int main(int argc, char* argv[])
     uv_async_t* async = new uv_async_t;
     uv_async_init(uv_default_loop(), async, uvconn::uv_async_call);//用于woker线程异步通知主线程
     int worker_thread_num = 1; 
-    if(!g_cfg.Get("worker_thread_num", worker_thread_num))
+    if(!g_cfg.Get("worker_thread_num", worker_thread_num) || (worker_thread_num > TASK_THREAD_NUM))
     {
-        worker_thread_num = 1;
+        worker_thread_num = TASK_THREAD_NUM; //限定业务线程数最大值
     }
-    for(int i = 0; i < worker_thread_num; i++)
+    for(int i = 0; i < worker_thread_num; i++)//要注意防止数组越界
     {
         uvconn::p_send_mem[i] = malloc(RB_SIZE);
         uvconn::rb_send[i] = new RingBuffer(RB_SIZE, false, false);
