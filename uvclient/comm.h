@@ -61,6 +61,7 @@ typedef struct {
     int connects = 0;
 } ConnInfo;
 
+//32字节一个包
 typedef struct {
     const void* stream = nullptr; //uv_stream_t*
     void* UserInfoPtr = nullptr; //UserInfo
@@ -68,6 +69,7 @@ typedef struct {
     int len = 0;
 }ImPack;
 
+//32字节一个包
 typedef struct 
 {
     enum {

@@ -125,6 +125,7 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
                 }
                 else
                 {
+                    LOG4_WARN("==========drop pack cmd(%d) in thread(%d)'s sendRb(%p), !!!", ntohl(*(unsigned int*)(pack.packBuf + 4)),  uv_thread_self(), m_sendRb);
                     return;//m_sendRb满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
                 }
     #endif
@@ -170,6 +171,7 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
                 }
                 else
                 {
+                    LOG4_WARN("==========drop pack cmd(%d) in thread(%d)'s sendRb(%p), !!!", ntohl(*(unsigned int*)(pack.packBuf + 4)),  uv_thread_self(), m_sendRb);
                     return;//m_sendRb满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
                 }
 #endif
