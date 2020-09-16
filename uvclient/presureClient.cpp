@@ -164,8 +164,10 @@ int main(int argc, char* argv[])
     }
     for(int i = 0; i < worker_thread_num; i++)//要注意防止数组越界
     {
-        uvconn::p_send_mem[i] = malloc(RB_SIZE);
-        uvconn::rb_send[i] = new RingBuffer(RB_SIZE, false, false);
+        // uvconn::p_send_mem[i] = malloc(RB_SIZE);
+        // uvconn::rb_send[i] = new RingBuffer(RB_SIZE, false, false);
+        uvconn::p_send_mem.push_back(malloc(RB_SIZE));
+        uvconn::rb_send.push_back(new RingBuffer(RB_SIZE, false, false));
         ImMessagePack* objTestImMsg = new ImMessagePack(&uvconn::rb_recv, uvconn::p_recv_mem, uvconn::rb_send[i], uvconn::p_send_mem[i], async, i);
         std::thread th(&Pack::StartThread, objTestImMsg);
         th.detach();
