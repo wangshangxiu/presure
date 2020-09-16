@@ -35,7 +35,8 @@ void on_connect(uv_connect_t* req, int status)
     else 
     {
         uv_close((uv_handle_t*)handle, close_cb);
-        LOG4_ERROR("status = %d, errorName(%s) , errorString(%s)" ,status, uv_err_name(status), uv_strerror(status));
+        LOG4_ERROR("userId(%ld) handle(%p)'s status = %d, errorName(%s) , errorString(%s)" , 
+            ((UserInfo*)handle->data)->userId,handle, status, uv_err_name(status), uv_strerror(status));
     }
 
     if(req) free(req);//无论成功与否，把过程量uv_connect_t回收了，但如果成功连接已经保存起来
@@ -123,6 +124,7 @@ void echo_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
                             else
                             {
                                 LOG4_WARN("==========drop pack cmd(%d) on stream(%p)!!!", ntohl(*(unsigned int*)(pack.packBuf + 4)), pack.stream);
+                                pack.packBuf = nullptr; //理论缓冲满了，数据没放进去
                                 delete []cbuf;//rb_recv满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
                                 return;
                             }
@@ -191,6 +193,7 @@ void on_parse_pack(const uv_stream_t* stream)
                     else
                     {
                         LOG4_WARN("==========drop pack cmd(%d) on stream(%p)!!!", ntohl(*(unsigned int*)(pack.packBuf + 4)), pack.stream);
+                        pack.packBuf = nullptr; //理论缓冲满了，数据没放进去
                         delete []buf;
                         return;//rb_recv满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
                     }

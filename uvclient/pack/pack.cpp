@@ -80,6 +80,10 @@ void Pack::OnThread()
             } 
             uv_async_send(m_asyn_send);
         }
+        else if(ret == -2)
+        { 
+            LOG4_ERROR("m_recvRb->pop(&pack , &len, m_recvMem) error");
+        }
         else
         {
             usleep(1000);//缓冲为空，业务线程可以休眠1ms
