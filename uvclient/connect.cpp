@@ -10,6 +10,7 @@ RingBuffer rb_recv(RB_SIZE*40, false, false);              //存放接收到的�
 std::vector<void*> p_send_mem;                             //writer:业务线程, reader:sockect线程, 用vector是因为自带长度
 std::vector<RingBuffer*> rb_send;                          //(RB_SIZE, false, false),多线程处理业务后要发包入缓冲，通知socket线程发送,有几个业务线程就有几个这样的rb，用vector是因为自带长度, 长度取值也跟并发要求相关
 std::map<uv_tcp_t*, void*> g_mapConnCache;                 //socket映射连接，连接与缓冲区关联，目的是不去占用uv_tcp_t.data
+static int currConnNums = 0;
 
 //void (*uv_connect_cb)(uv_connect_t* req, int status);
 void on_connect(uv_connect_t* req, int status)
@@ -27,6 +28,8 @@ void on_connect(uv_connect_t* req, int status)
             g_mapConnCache.insert(std::make_pair(handle, new CircleBuffer<char>(TCP_BUFFER_LEN)));
         }
         uv_read_start((uv_stream_t*)handle , alloc_buffer, echo_read);
+
+        currConnNums++;//统计建立连接的数量，当满足login_qps的连接数后，可以zhi'jia
         //登录
         MsgBody msgBody;
         ImMessagePack::LoginReq(*pUserInfo, msgBody);
