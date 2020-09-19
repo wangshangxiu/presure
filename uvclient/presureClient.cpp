@@ -124,9 +124,9 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
         //其实batch就有这个效果，但比较方式能避免1s内客户端产生QPS的上限导致的问题
         if(regionIndexTime <= 1*1000*1000) 
         {
+            LOG4_ERROR("=========userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
             vUserLoginInOneSecond.push_back(&listUserInfo[userInfoListCounter]);
             userInfoListCounter++;
-            LOG4_ERROR("=========userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
         }
         else
         {
@@ -134,6 +134,10 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
             regionIndex = userInfoListCounter; //下一区间的开始
             break; //最多一次循环batch次(客户端一个秒区间模拟的QPS值)，但如果遇到生产高QPS，耗时超出1s
         }
+    }
+    if(vUserLoginInOneSecond.size() == batch) //如果这batch样本都在1s内，下个区间属于正常跳动
+    {
+        regionIndex = userInfoListCounter; 
     }
 
     std::set<long long> loginTimeCostSet;
@@ -165,7 +169,23 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
     float average = tatolCostTime/(loginSuccessfulCount*1.0);
     LOG4_WARN("-----------Time:%ld Login Tps (QPS(%d) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), error(%f), timeout(%d))-----------",
         globalFuncation::GetMicrosecond(),  vUserLoginInOneSecond.size(), tatolCostTime, *loginTimeCostSet.begin(), 
-        *loginTimeCostSet.rbegin(),  average, restError/(vUserLoginInOneSecond.size()*1.0) , loginTimeOverCount);
+        *loginTimeCostSet.crbegin(),  average, restError/(vUserLoginInOneSecond.size()*1.0) , loginTimeOverCount);
+
+    if(userInfoListCounter >= (int)listUserInfo.size())
+    {
+        //本来还想算一次总样本的
+        // LOG4_WARN("-----------Time:%ld Login Tps (QPS(%d) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), error(%f), timeout(%d))-----------",
+        //     globalFuncation::GetMicrosecond(),  vUserLoginInOneSecond.size(), tatolCostTime, *loginTimeCostSet.begin(), 
+        //     *loginTimeCostSet.crbegin(),  average, restError/(vUserLoginInOneSecond.size()*1.0) , loginTimeOverCount);
+        LOG4_INFO("uv_logintask_statistics_timer completed, close timer...");
+        uv_timer_stop(handle);
+        userInfoListCounter = 0;
+        uv_close((uv_handle_t*)handle, [](uv_handle_t* handle){
+            if(handle){
+                delete (uv_timer_t*)handle;
+            }
+        });
+    }
 }
 
 //每个周期检查同一时间发起连接的一批用户，如果状态处于连接中，（5s内登录态没改变），那么认为建连接超时
