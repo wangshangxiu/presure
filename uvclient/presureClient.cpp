@@ -135,7 +135,7 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
             break; //最多一次循环batch次(客户端一个秒区间模拟的QPS值)，但如果遇到生产高QPS，耗时超出1s
         }
     }
-    if(vUserLoginInOneSecond.size() == batch) //如果这batch样本都在1s内，下个区间属于正常跳动
+    if(vUserLoginInOneSecond.size() == batch) //如果这batch样本都在1s内，主动移到下个区间
     {
         regionIndex = userInfoListCounter; 
     }
@@ -167,7 +167,7 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
 
     // LOG4_WARN("-----------Time:%ld Login Tps (conroutin(%d) , perio (%d), tatolCostTime(%ld), QPS(%f))-----------",globalFuncation::GetMicrosecond(),  batch, perio, tatolCostTime, ((tatolCostTime/(batch*1.0))/perio));
     float average = tatolCostTime/(loginSuccessfulCount*1.0);
-    LOG4_WARN("-----------Time:%ld Login Tps (QPS(%d) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), error(%f), timeout(%d))-----------",
+    LOG4_WARN("-----------Time:%ld Login Tps (QPS(%d/s) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), error(%f), timeout(%d))-----------",
         globalFuncation::GetMicrosecond(),  vUserLoginInOneSecond.size(), tatolCostTime, *loginTimeCostSet.begin(), 
         *loginTimeCostSet.crbegin(),  average, restError/(vUserLoginInOneSecond.size()*1.0) , loginTimeOverCount);
 
@@ -180,6 +180,7 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
         LOG4_INFO("uv_logintask_statistics_timer completed, close timer...");
         uv_timer_stop(handle);
         userInfoListCounter = 0;
+        regionIndex = 0;
         uv_close((uv_handle_t*)handle, [](uv_handle_t* handle){
             if(handle){
                 delete (uv_timer_t*)handle;
