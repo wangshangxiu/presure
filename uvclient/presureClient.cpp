@@ -79,15 +79,15 @@ void uv_creatconn_timer_callback(uv_timer_t* handle)
         uv_tcp_connect(uconn, utcp, (const struct sockaddr*)&dest, uvconn::on_connect);
         listUserInfo[userInfoListCounter].loginInfo.startConnectTime = globalFuncation::GetMicrosecond(); //设置发起tcp连接的时间， TaskTime
 
-        //超时定时器
-        {
-            uv_timer_t*  checkTimeOutTimer = new uv_timer_t; 
-            checkTimeOutTimer->data = &listUserInfo[userInfoListCounter];
-            uv_timer_init(uv_default_loop(), checkTimeOutTimer);
-            uv_timer_start(checkTimeOutTimer, uv_personal_conn_timeout_timer_callback, 
-                TCP_CONNNECT_TIME_OVER, TCP_CONNNECT_TIME_OVER);//5s后执行第一次，周期5s,看TCP连接是否返回
-            listUserInfo[userInfoListCounter].timeOutTimer = checkTimeOutTimer; //方便后续回收
-        }
+        // //超时定时器
+        // {
+        //     uv_timer_t*  checkTimeOutTimer = new uv_timer_t; 
+        //     checkTimeOutTimer->data = &listUserInfo[userInfoListCounter];
+        //     uv_timer_init(uv_default_loop(), checkTimeOutTimer);
+        //     uv_timer_start(checkTimeOutTimer, uv_personal_conn_timeout_timer_callback, 
+        //         TCP_CONNNECT_TIME_OVER, TCP_CONNNECT_TIME_OVER);//5s后执行第一次，周期5s,看TCP连接是否返回
+        //     listUserInfo[userInfoListCounter].timeOutTimer = checkTimeOutTimer; //方便后续回收
+        // }
 
         userInfoListCounter++;
     }
@@ -105,13 +105,14 @@ void uv_creatconn_timer_callback(uv_timer_t* handle)
     }
 }
 
+//统计的样本总是慢于发出请求的样本，并保证被统计的样本是已经等待了足够超时时间的
 void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
 {
     LOG4_INFO("---------uv_logintask_statistics_timer_callback-------");
     UTimerData* pUTimerData = (UTimerData*)handle->data;
     std::vector<UserInfo>& listUserInfo = *(std::vector<UserInfo>*)pUTimerData->vUserInfo;
     int perio = pUTimerData->iPerio;//周期
-    int batch = pUTimerData->iBatch;//并发数
+    int batch = pUTimerData->iBatch;//并发数, 但batch很大时,可能并不能在一秒内全部发出,所以在下边统计时需要判断batch批次内同1s发出的
     static int userInfoListCounter = 0;
     static int regionIndex = 0;     //同1s区间内第一个发出的请求
     //计算周期内指定并发数的QPS
@@ -119,19 +120,19 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
     for(int i = 0; userInfoListCounter < (int)listUserInfo.size() && i < batch ; i++)
     {
         long long regionIndexTime = listUserInfo[userInfoListCounter].loginInfo.startConnectTime -  listUserInfo[regionIndex].loginInfo.startConnectTime;
-        LOG4_ERROR("=========userId(%ld) cost time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
         //把同1s内发出请求的用户作为一个区间来统计，客户端发出QPS是可以调节的，这个比较方式也总能准确的把一个个区间的QPS分离出来
         //其实batch就有这个效果，但比较方式能避免1s内客户端产生QPS的上限导致的问题
-        if(regionIndexTime <= 1*000*000) 
+        if(regionIndexTime <= 1*1000*1000) 
         {
             vUserLoginInOneSecond.push_back(&listUserInfo[userInfoListCounter]);
             userInfoListCounter++;
+            LOG4_ERROR("=========userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
         }
         else
         {
-            LOG4_ERROR("=========userId(%ld) cost time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
+            LOG4_ERROR("=========userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
             regionIndex = userInfoListCounter; //下一区间的开始
-            // break; //最多一次循环batch次(客户端一个秒区间模拟的QPS值)，但如果遇到生产高QPS，耗时超出1s
+            break; //最多一次循环batch次(客户端一个秒区间模拟的QPS值)，但如果遇到生产高QPS，耗时超出1s
         }
     }
 
@@ -145,9 +146,10 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
         if(pUserInfo->loginInfo.loginStatus == 0) //登录成功
         {
             loginSuccessfulCount++;
-            long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime;
-            loginTimeCostSet.insert(costTime); //目的是想得到最大最小值
-            tatolCostTime += costTime;
+            long long loginCostTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime;
+            LOG4_ERROR("=========userId(%ld) login const time(%ld)", pUserInfo->userId, loginCostTime);
+            loginTimeCostSet.insert(loginCostTime); //目的是想得到最大最小值
+            tatolCostTime += loginCostTime;
         }
         else if(pUserInfo->loginInfo.state == E_TCP_TIMEOUT)
         {
@@ -161,9 +163,9 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
 
     // LOG4_WARN("-----------Time:%ld Login Tps (conroutin(%d) , perio (%d), tatolCostTime(%ld), QPS(%f))-----------",globalFuncation::GetMicrosecond(),  batch, perio, tatolCostTime, ((tatolCostTime/(batch*1.0))/perio));
     float average = tatolCostTime/(loginSuccessfulCount*1.0);
-    LOG4_WARN("-----------Time:%ld Login Tps (sample(%d) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), QPS(%f), error(%f), timeout(%d))-----------",
+    LOG4_WARN("-----------Time:%ld Login Tps (QPS(%d) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), error(%f), timeout(%d))-----------",
         globalFuncation::GetMicrosecond(),  vUserLoginInOneSecond.size(), tatolCostTime, *loginTimeCostSet.begin(), 
-        *loginTimeCostSet.rbegin(),  average, perio*1000*1000.0/average, restError/(loginSuccessfulCount*1.0) , loginTimeOverCount);
+        *loginTimeCostSet.rbegin(),  average, restError/(vUserLoginInOneSecond.size()*1.0) , loginTimeOverCount);
 }
 
 //每个周期检查同一时间发起连接的一批用户，如果状态处于连接中，（5s内登录态没改变），那么认为建连接超时
