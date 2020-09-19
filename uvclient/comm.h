@@ -83,31 +83,58 @@ typedef struct
     int istatus = 0;
 }CustomEvent;
 
+//常常忘记在枚举的'}'后加';'
+enum
+{
+    E_TCP_CONNECTING = 0,
+    E_TCP_ESHTABLISHED = 1,
+    // E_LOGINING = 2,
+    // E_LOGINRSP = 3,
+    E_TCP_TIMEOUT = 4,     //TCP超时
+    // E_LOGINRSP_PACK_DROP = 5, //客户端主动丢掉登录返回的包
+};
+
 typedef struct 
 {
-    long long startConnectTime = 0;
-    long long loginTime = 0;
-    long long loginRspTime = 0;
-    int loginStatus = -1;//0成功， 非0失败，主要是和登录协议的status一致
+    long long startConnectTime = 0; //开始连接时间
+    long long finConnectedTime = 0; //建立连接时间
+    long long loginTime = 0;        //登录时间
+    long long loginRspTime = 0;     //登录返回时间
+    int loginStatus = -1;           //0成功， 非0失败，主要是和登录协议的status一致
+    int state = 0;             //登录的状态， 包括发起tcp, 建立tcp, 登录中，登录返回
 }LoginInfo;
 
 typedef struct {
-    long long userId = 0;//db有
-    long long loginSeq = 0;//程序产生
-    int  seq = 0;
-    std::string  devId; //设备ID，db有
-    std::string  authToken;//验证token，db有
-    std::string ecdhKey[2];//signal key pair，协商密钥对,index=0, pub; index=1, pri
-    std::string aesKey;//开始是自己，成功换成服务器生成的
-    std::string sessionId;//
-    ConnInfo info;//连接信息
-    LoginInfo  loginInfo;//登录事务信息
-    uv_timer_t *timer = nullptr;//用户心跳定时器
-    uv_timer_t *msgTimer = nullptr;//消息定时器
-    const uv_tcp_t *conn = nullptr;//此用户使用的连接，这里不用负责内存回收
+    long long userId = 0;               //db有
+    long long loginSeq = 0;             //程序产生
+    int  seq = 0;                       //
+
+    std::string  devId;                 //设备ID，db有
+    std::string  authToken;             //验证token，db有
+    std::string ecdhKey[2];             //signal key pair，协商密钥对,index=0, pub; index=1, pri
+    std::string aesKey;                 //开始是自己，成功换成服务器生成的
+    std::string sessionId;              //
+
+    ConnInfo info;                      //连接信息
+    LoginInfo  loginInfo;               //登录事务信息
+
+    uv_timer_t *timeOutTimer = nullptr; //超时定时器
+    uv_timer_t *timer = nullptr;        //用户心跳定时器
+    uv_timer_t *msgTimer = nullptr;     //消息定时器
+    const uv_tcp_t *conn = nullptr;     //此用户使用的连接，这里不用负责内存回收
 
     void reCycleSource()
     {
+        if(timeOutTimer)
+        {
+            uv_timer_stop((uv_timer_t*)timeOutTimer);
+            uv_close((uv_handle_t*)timeOutTimer,[](uv_handle_t* handle){
+                if(handle){
+                    delete (uv_timer_t*)handle;
+                }
+            });
+            timeOutTimer = nullptr;
+        }
         if(timer)
         {
             uv_timer_stop((uv_timer_t*)timer);

@@ -29,7 +29,9 @@ void on_connect(uv_connect_t* req, int status)
         }
         uv_read_start((uv_stream_t*)handle , alloc_buffer, echo_read);
 
-        currConnNums++;//统计建立连接的数量，当满足login_qps的连接数后，可以zhi'jia
+        pUserInfo->loginInfo.finConnectedTime = globalFuncation::GetMicrosecond(); //设置tcp连接成功的时间， TaskTime
+        pUserInfo->loginInfo.state = E_TCP_ESHTABLISHED;   //连接确立状态
+        currConnNums++;//统计建立连接的数量，当满足login_qps的连接数后，可以划分一个区间
         //登录
         MsgBody msgBody;
         ImMessagePack::LoginReq(*pUserInfo, msgBody);
@@ -37,9 +39,13 @@ void on_connect(uv_connect_t* req, int status)
     }
     else 
     {
-        uv_close((uv_handle_t*)handle, close_cb);
-        LOG4_ERROR("userId(%ld) handle(%p)'s status = %d, errorName(%s) , errorString(%s)" , 
-            ((UserInfo*)handle->data)->userId,handle, status, uv_err_name(status), uv_strerror(status));
+        auto iter = g_mapConnCache.find((uv_tcp_t*)handle);
+        if(iter != g_mapConnCache.end())
+        {
+            uv_close((uv_handle_t*)handle, close_cb);
+            LOG4_ERROR("userId(%ld) handle(%p)'s status = %d, errorName(%s) , errorString(%s)" , 
+                ((UserInfo*)handle->data)->userId,handle, status, uv_err_name(status), uv_strerror(status));
+        }
     }
 
     if(req) free(req);//无论成功与否，把过程量uv_connect_t回收了，但如果成功连接已经保存起来

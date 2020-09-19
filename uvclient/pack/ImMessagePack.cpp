@@ -33,7 +33,7 @@ void ImMessagePack::LoginReq(UserInfo& userInfo, MsgBody& msgBody)
     static const std::string& rsaKeyPath = "./conf/rsakey/public_key.pem";
     static RSA* rsaPublicKey = readRsaPublicKeyFromFile(const_cast<char*>(rsaKeyPath.c_str())); 
     {
-        userInfo.loginInfo.loginTime = globalFuncation::GetMicrosecond();//设置登录时间
+        userInfo.loginInfo.loginTime = globalFuncation::GetMicrosecond();//设置用户登录时间， TaskTime
         LOG4_TRACE("userId(%ld) devId(%s) token(%s) logining at %ld ...", userInfo.userId, userInfo.devId.c_str(), userInfo.authToken.c_str(), userInfo.loginInfo.loginTime);
         printf("userId(%ld) devId(%s) token(%s) logining at %ld ...\n", userInfo.userId, userInfo.devId.c_str(), userInfo.authToken.c_str(), userInfo.loginInfo.loginTime);
         im_login::Login loginReq;
@@ -106,13 +106,14 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
                     LOG4_ERROR("decrypt sessionKey error, sharedKey(%s)", sharedKey.c_str());
                     return;
                 }
-                pUserInfo->loginInfo.loginRspTime = globalFuncation::GetMicrosecond();//登录返回并处理完的时间
-                LOG4_INFO("userId(%lld) devId(%s) token(%s) loginRsp successfully at %ld", 
-                    pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime);
-                long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.loginTime;
+                pUserInfo->loginInfo.loginRspTime = globalFuncation::GetMicrosecond(); //设置用户登录返回时间， TaskTime
+                // long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.loginTime;
+                long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime; //（登录返回时间-TCP建连接时间）
+                LOG4_INFO("userId(%lld) devId(%s) token(%s) loginRsp successfully at %ld, cost time %ld", 
+                    pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime, costTime);
                 printf("userId(%lld) devId(%s) token(%s) loginRsp successfully at %ld, cost time %ld\n", 
                     pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime, costTime);
-                //登录成功后需要为当前用户开启心跳定时器，这个步骤要回到socket线程
+                //登录成功后需要为当前用户开启心跳定时器，这个步骤要回到socket线程里设置
     #if 1
                 CustomEvent event;
                 event.handle = pack.stream; 
@@ -146,10 +147,11 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
         loginRsp.ParseFromString(msgbody.body());
         LOG4_ERROR("loginRsp failed: (%s)", loginRsp.DebugString().c_str());
         pUserInfo->loginInfo.loginRspTime = globalFuncation::GetMicrosecond();//登录返回并处理完的时间
-        LOG4_ERROR("userId(%lld) devId(%s) token(%s) loginRsp failed at %ld", 
-            pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime);
-        printf("userId(%lld) devId(%s) token(%s) loginRsp failed at %ld\n", 
-            pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime);
+        long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime; //（登录返回时间-TCP建连接时间）
+        LOG4_ERROR("userId(%lld) devId(%s) token(%s) loginRsp failed at %ld, cost time %ld", 
+            pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime, costTime);
+        printf("userId(%lld) devId(%s) token(%s) loginRsp failed at %ld, cost time %ld\n", 
+            pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime, costTime);
         switch (status)//不同情况的登录返回处理
         {
             case 0:
@@ -160,20 +162,20 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
                 break;
         }
 #if 1
-                CustomEvent event;
-                event.handle = pack.stream; 
-                event.userInfo = pUserInfo;//连接对应用户信息指针
-                event.istatus = status;
-                event.ieventType = CustomEvent::EVENT_LOGIN_FAILED;
-                if(m_sendRb->push(&event, sizeof(event), m_sendMem) == 0)//pack放到rb_recv, 能放下则放下
-                {
-                    LOG4_INFO("push CustomEvent of event.handle(%p) to ringbuffer, event.ieventType(%d), event.istatus(%d), rb_send(%p), p_send_mem(%p)",event.handle, event.ieventType, event.istatus ,  m_sendRb, m_sendMem);
-                }
-                else
-                {
-                    LOG4_WARN("==========drop pack cmd(%d) in thread(%d)'s sendRb(%p), !!!", ntohl(*(unsigned int*)(pack.packBuf + 4)),  uv_thread_self(), m_sendRb);
-                    return;//m_sendRb满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
-                }
+        CustomEvent event;
+        event.handle = pack.stream; 
+        event.userInfo = pUserInfo;//连接对应用户信息指针
+        event.istatus = status;
+        event.ieventType = CustomEvent::EVENT_LOGIN_FAILED;
+        if(m_sendRb->push(&event, sizeof(event), m_sendMem) == 0)//pack放到rb_recv, 能放下则放下
+        {
+            LOG4_INFO("push CustomEvent of event.handle(%p) to ringbuffer, event.ieventType(%d), event.istatus(%d), rb_send(%p), p_send_mem(%p)",event.handle, event.ieventType, event.istatus ,  m_sendRb, m_sendMem);
+        }
+        else
+        {
+            LOG4_WARN("==========drop pack cmd(%d) in thread(%d)'s sendRb(%p), !!!", ntohl(*(unsigned int*)(pack.packBuf + 4)),  uv_thread_self(), m_sendRb);
+            return;//m_sendRb满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
+        }
 #endif
     }
 }
