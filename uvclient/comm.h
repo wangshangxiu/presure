@@ -88,10 +88,8 @@ enum
 {
     E_TCP_CONNECTING = 0,
     E_TCP_ESHTABLISHED = 1,
-    // E_LOGINING = 2,
-    // E_LOGINRSP = 3,
-    E_TCP_TIMEOUT = 4,     //TCP超时
-    // E_LOGINRSP_PACK_DROP = 5, //客户端主动丢掉登录返回的包
+    E_TCP_TIMEOUT = 2,     //TCP超时
+    // E_LOGINRSP_PACK_DROP = 3, //客户端主动丢掉登录返回的包
 };
 
 typedef struct 

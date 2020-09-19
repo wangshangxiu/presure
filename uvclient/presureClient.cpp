@@ -21,7 +21,8 @@
 #include "CJsonObject.hpp"
 #include "comm.h"
 
-#define TCP_CONNNECT_TIME_OVER 10                       //3s
+#define USE_CUSTOM_TIMEOUT_TIMER
+#define TCP_CONNNECT_TIME_OVER 30                       //30s
 util::CJsonObject g_cfg;                                //配置
 std::vector<UserInfo> listUserInfo;                     //模拟用户列表
 std::vector<std::string>  dstIpList;                    //IP列表
@@ -31,10 +32,10 @@ int dstPort = 0;                                        //端口
 void uv_personal_conn_timeout_timer_callback(uv_timer_t* handle)
 {
     UserInfo* pUserInfo = (UserInfo*)handle->data;
-    if(pUserInfo->loginInfo.state == E_TCP_CONNECTING)//5s后定时器触发时还是连接中，则认为连接超时
+    if(pUserInfo->loginInfo.state != E_TCP_ESHTABLISHED)//TCP_CONNNECT_TIME_OVER秒后定时器触发时还没进入连接完成，则认为连接超时
     {
         pUserInfo->loginInfo.state = E_TCP_TIMEOUT;
-        if(pUserInfo->conn)//tcp超时，关闭连接，用户的定时器在关闭连接的回调中被关闭
+        if(pUserInfo->conn)//tcp超时，关闭连接，用户的定时器资源回收在关闭连接的回调中被关闭
         {
             uv_close((uv_handle_t*)pUserInfo->conn, uvconn::close_cb);
             LOG4_ERROR("user(%ld) devid(%s) token(%s) on stream(%p) connect timeout...",
@@ -42,15 +43,15 @@ void uv_personal_conn_timeout_timer_callback(uv_timer_t* handle)
                 pUserInfo->authToken.c_str(), pUserInfo->conn);
         } 
     }
-    else
-    {
-        uv_timer_stop((uv_timer_t*)handle);
-        uv_close((uv_handle_t*)handle,[](uv_handle_t* handle){
-            if(handle){
-                delete (uv_timer_t*)handle;
-            }
-        });
-    }
+    // else
+    // {
+    //     uv_timer_stop((uv_timer_t*)handle);
+    //     uv_close((uv_handle_t*)handle,[](uv_handle_t* handle){
+    //         if(handle){
+    //             delete (uv_timer_t*)handle;
+    //         }
+    //     });
+    // }
 }
 
 //void (*uv_timer_cb)(uv_timer_t* handle);
@@ -79,16 +80,17 @@ void uv_creatconn_timer_callback(uv_timer_t* handle)
         uv_tcp_connect(uconn, utcp, (const struct sockaddr*)&dest, uvconn::on_connect);
         listUserInfo[userInfoListCounter].loginInfo.startConnectTime = globalFuncation::GetMicrosecond(); //设置发起tcp连接的时间， TaskTime
 
-        // //超时定时器
-        // {
-        //     uv_timer_t*  checkTimeOutTimer = new uv_timer_t; 
-        //     checkTimeOutTimer->data = &listUserInfo[userInfoListCounter];
-        //     uv_timer_init(uv_default_loop(), checkTimeOutTimer);
-        //     uv_timer_start(checkTimeOutTimer, uv_personal_conn_timeout_timer_callback, 
-        //         TCP_CONNNECT_TIME_OVER, TCP_CONNNECT_TIME_OVER);//5s后执行第一次，周期5s,看TCP连接是否返回
-        //     listUserInfo[userInfoListCounter].timeOutTimer = checkTimeOutTimer; //方便后续回收
-        // }
-
+#ifdef USE_CUSTOM_TIMEOUT_TIMER
+        //超时定时器
+        {
+            uv_timer_t*  checkTimeOutTimer = new uv_timer_t; 
+            checkTimeOutTimer->data = &listUserInfo[userInfoListCounter];
+            uv_timer_init(uv_default_loop(), checkTimeOutTimer);
+            uv_timer_start(checkTimeOutTimer, uv_personal_conn_timeout_timer_callback, 
+                TCP_CONNNECT_TIME_OVER, TCP_CONNNECT_TIME_OVER);//TCP_CONNNECT_TIME_OVER s后执行第一次,看TCP连接是否返回
+            listUserInfo[userInfoListCounter].timeOutTimer = checkTimeOutTimer; //方便后续回收
+        }
+#endif 
         userInfoListCounter++;
     }
 
@@ -174,9 +176,6 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
     if(userInfoListCounter >= (int)listUserInfo.size())
     {
         //本来还想算一次总样本的
-        // LOG4_WARN("-----------Time:%ld Login Tps (QPS(%d) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), error(%f), timeout(%d))-----------",
-        //     globalFuncation::GetMicrosecond(),  vUserLoginInOneSecond.size(), tatolCostTime, *loginTimeCostSet.begin(), 
-        //     *loginTimeCostSet.crbegin(),  average, restError/(vUserLoginInOneSecond.size()*1.0) , loginTimeOverCount);
         LOG4_INFO("uv_logintask_statistics_timer completed, close timer...");
         uv_timer_stop(handle);
         userInfoListCounter = 0;
@@ -325,7 +324,7 @@ int main(int argc, char* argv[])
     uv_timer_t*  loginTaskStatisticsTimer= new uv_timer_t; 
     loginTaskStatisticsTimer->data = &uvTimerData;//挂接定时器用到的数据
     uv_timer_init(uv_default_loop(), loginTaskStatisticsTimer);
-    uv_timer_start(loginTaskStatisticsTimer, uv_logintask_statistics_timer_callback, TCP_CONNNECT_TIME_OVER*2*1000, 1*1000);//10s后执行第一次, 目的是充分等到每条TCP的超时定时器已经触发，周期为1秒
+    uv_timer_start(loginTaskStatisticsTimer, uv_logintask_statistics_timer_callback, TCP_CONNNECT_TIME_OVER*2*1000, 1*1000);//2倍TCP_CONNNECT_TIME_OVER后执行第一次, 目的是充分等到每条TCP的超时定时器已经触发
 
     // uv_timer_t*  checkTcpConnectTimeOutTimer= new uv_timer_t; 
     // checkTcpConnectTimeOutTimer->data = &uvTimerData;//挂接定时器用到的数据

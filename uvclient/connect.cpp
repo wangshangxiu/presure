@@ -30,7 +30,7 @@ void on_connect(uv_connect_t* req, int status)
         uv_read_start((uv_stream_t*)handle , alloc_buffer, echo_read);
 
         pUserInfo->loginInfo.finConnectedTime = globalFuncation::GetMicrosecond(); //设置tcp连接成功的时间， TaskTime
-        pUserInfo->loginInfo.state = E_TCP_ESHTABLISHED;   //连接确立状态
+        pUserInfo->loginInfo.state = E_TCP_ESHTABLISHED;   //连接确立状态,TODO，应该打印建立连接的时间
         currConnNums++;//统计建立连接的数量，当满足login_qps的连接数后，可以划分一个区间
         //登录
         MsgBody msgBody;
@@ -39,7 +39,7 @@ void on_connect(uv_connect_t* req, int status)
     }
     else 
     {
-        auto iter = g_mapConnCache.find((uv_tcp_t*)handle);
+        auto iter = g_mapConnCache.find((uv_tcp_t*)handle); //这里判断的原因在于开启了超时定时器，在这之前TCP和用户相关资源已经被回收，不能再回收一次
         if(iter != g_mapConnCache.end())
         {
             uv_close((uv_handle_t*)handle, close_cb);
@@ -314,7 +314,7 @@ void uv_async_call(uv_async_t* handle)
                     }
                     break;
                 case CustomEvent::EVENT_LOGIN_FAILED:
-                    exit(0);//直接退出,方便日志查看
+                    // exit(0);//直接退出,方便日志查看
                     break;
                 default:
                     break;
