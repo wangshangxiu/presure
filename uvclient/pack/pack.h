@@ -9,11 +9,13 @@
 #include "comm.h"
 #include "ring_buffer.h"
 #include "msg.pb.h"
+#include "concurrentqueue.h"
 class Pack
 {
 public:
     Pack(RingBuffer* recvRb, void *recvMem, RingBuffer* sendRb, void* sendMem, uv_async_t* uvAsyn, int index);
-    Pack();//
+    Pack(moodycamel::ConcurrentQueue<ImPack>* recvCQ, moodycamel::ConcurrentQueue<CustomEvent>* sendCQ, uv_async_t* uvAsyn, int index);
+    Pack(); //无参构造
     ~Pack();
     static void StartThread(void *p);                           //线程函数入口
     typedef void (Pack::*MemberFuntionPointer)(const ImPack& pack);
@@ -33,6 +35,9 @@ protected:
     void *m_sendMem;                                            //业务线程发送数据包投递的无锁缓冲内存区
     uv_async_t  *m_asyn_send;                                   //异步通知socket线程
     int m_index;                                                //线程号
+
+    moodycamel::ConcurrentQueue<ImPack> *m_recv_cq;             //另一种lock-free queue
+    moodycamel::ConcurrentQueue<CustomEvent> *m_send_cq;
 };
 
 

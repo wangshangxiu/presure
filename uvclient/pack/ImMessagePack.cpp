@@ -10,6 +10,16 @@ ImMessagePack::ImMessagePack(RingBuffer* recvRb, void *recvMem, RingBuffer* send
     ConnectMemberFun(4502, MemberFuntionPointer(&ImMessagePack::GroupChatRsp));
 }
 
+ImMessagePack::ImMessagePack(moodycamel::ConcurrentQueue<ImPack>* recvCQ, moodycamel::ConcurrentQueue<CustomEvent>* sendCQ, uv_async_t* uvAsyn, int index) :
+    Pack(recvCQ, sendCQ, uvAsyn, index)
+{
+    //ConnectMemberFun(1002, &ImMessagePack::LoginRsp);//这种写法会报编译错误，提示找不到类型
+    ConnectMemberFun(1002, MemberFuntionPointer(&ImMessagePack::LoginRsp));
+    ConnectMemberFun(1102, MemberFuntionPointer(&ImMessagePack::HearBeatRsp));
+    ConnectMemberFun(4002, MemberFuntionPointer(&ImMessagePack::MsgChatRsp));
+    ConnectMemberFun(4502, MemberFuntionPointer(&ImMessagePack::GroupChatRsp));
+}
+
 ImMessagePack::ImMessagePack()
 {
     //ConnectMemberFun(1002, &ImMessagePack::LoginRsp);//这种写法会报编译错误，提示找不到类型
@@ -21,6 +31,29 @@ ImMessagePack::ImMessagePack()
 
 ImMessagePack::~ImMessagePack()
 {
+}
+
+void ImMessagePack::OnThread()
+{
+    for(;;)
+    {
+        ImPack pack; 
+        bool ret = m_recv_cq->try_dequeue(pack);
+        if(ret == true)
+        {
+            LOG4_INFO("pop pack of  stream(%p) from ringbuffer, pack->packBuf(%p), pack->len(%d), m_recv_cq(%p)",pack.stream, pack.packBuf, pack.len, m_recv_cq);
+            DoTask(pack);
+            if(pack.packBuf)
+            {
+                delete pack.packBuf;//回收在socket线程分配出来的包内存
+            } 
+            uv_async_send(m_asyn_send);
+        }
+        else
+        {
+            usleep(1000);//缓冲为空，业务线程可以休眠1ms
+        }
+    }
 }
 
 void ImMessagePack::CallDoTask(const ImPack& pack)
@@ -114,12 +147,23 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
                 printf("userId(%lld) devId(%s) token(%s) loginRsp successfully at %ld, cost time %ld\n", 
                     pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime, costTime);
                 //登录成功后需要为当前用户开启心跳定时器，这个步骤要回到socket线程里设置
-    #if 1
+#if 1
                 CustomEvent event;
                 event.handle = pack.stream; 
                 event.userInfo = pUserInfo;//连接对应用户信息指针
                 event.istatus = 0;
                 event.ieventType = CustomEvent::EVENT_LOGIN_SUCCESSE;
+#ifdef USER_CONCURRENT_QUEUE
+                if(m_send_cq->try_enqueue(event))
+                {
+                    LOG4_INFO("push CustomEvent of event.handle(%p) to ringbuffer, event.ieventType(%d), event.istatus(%d), m_send_cq(%p)",event.handle, event.ieventType, event.istatus ,  m_send_cq);
+                } 
+                else
+                {
+                    LOG4_WARN("==========drop pack cmd(%d) in thread(%d)'s m_send_cq(%p), !!!", ntohl(*(unsigned int*)(pack.packBuf + 4)),  uv_thread_self(), m_send_cq);
+                    return;//m_send_cq满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
+                }
+#else 
                 if(m_sendRb->push(&event, sizeof(event), m_sendMem) == 0)//pack放到rb_recv, 能放下则放下
                 {
                     LOG4_INFO("push CustomEvent of event.handle(%p) to ringbuffer, event.ieventType(%d), event.istatus(%d), rb_send(%p), p_send_mem(%p)",event.handle, event.ieventType, event.istatus ,  m_sendRb, m_sendMem);
@@ -129,7 +173,8 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
                     LOG4_WARN("==========drop pack cmd(%d) in thread(%d)'s sendRb(%p), !!!", ntohl(*(unsigned int*)(pack.packBuf + 4)),  uv_thread_self(), m_sendRb);
                     return;//m_sendRb满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
                 }
-    #endif
+#endif
+#endif
             }
             else
             {
@@ -167,6 +212,17 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
         event.userInfo = pUserInfo;//连接对应用户信息指针
         event.istatus = status;
         event.ieventType = CustomEvent::EVENT_LOGIN_FAILED;
+#ifdef USER_CONCURRENT_QUEUE
+        if(m_send_cq->try_enqueue(event))
+        {
+            LOG4_INFO("push CustomEvent of event.handle(%p) to ringbuffer, event.ieventType(%d), event.istatus(%d), m_send_cq(%p)",event.handle, event.ieventType, event.istatus , m_send_cq);
+        } 
+        else
+        {
+            LOG4_WARN("==========drop pack cmd(%d) in thread(%d)'s m_send_cq(%p), !!!", ntohl(*(unsigned int*)(pack.packBuf + 4)),  uv_thread_self(), m_send_cq);
+            return;//m_sendRb满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
+        }
+#else 
         if(m_sendRb->push(&event, sizeof(event), m_sendMem) == 0)//pack放到rb_recv, 能放下则放下
         {
             LOG4_INFO("push CustomEvent of event.handle(%p) to ringbuffer, event.ieventType(%d), event.istatus(%d), rb_send(%p), p_send_mem(%p)",event.handle, event.ieventType, event.istatus ,  m_sendRb, m_sendMem);
@@ -176,6 +232,7 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
             LOG4_WARN("==========drop pack cmd(%d) in thread(%d)'s sendRb(%p), !!!", ntohl(*(unsigned int*)(pack.packBuf + 4)),  uv_thread_self(), m_sendRb);
             return;//m_sendRb满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
         }
+#endif
 #endif
     }
 }

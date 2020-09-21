@@ -5,12 +5,16 @@
 #include "login.pb.h"
 #include "ImError.h"
 #include "client.pb.h"
+#define USER_CONCURRENT_QUEUE
 class ImMessagePack: public Pack
 {
 public:
     ImMessagePack(RingBuffer* recvRb, void *recvMem, RingBuffer* sendRb, void* sendMem, uv_async_t* uvAsyn, int index);
+    ImMessagePack(moodycamel::ConcurrentQueue<ImPack>* recvCQ, moodycamel::ConcurrentQueue<CustomEvent>* sendCQ, uv_async_t* uvAsyn, int index);
     ImMessagePack();
     ~ImMessagePack();
+public:
+    virtual void OnThread();
     //主动请求
     static void LoginReq(UserInfo& userInfo, MsgBody& msgBody);
     static void HeatBeatReq(const UserInfo& userInfo, MsgBody& msgBody);

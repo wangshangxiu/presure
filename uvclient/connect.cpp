@@ -3,12 +3,16 @@
 #include "CircleBuffer.hpp"
 #include "ImMessagePack.h"
 #include "client.pb.h"
+
+#define CQ_SIZE 32*10000
 namespace uvconn
 {
 void *p_recv_mem = malloc(RB_SIZE*40);                     //writer:sockect线程,reader:业务线程, rb_recv对应的缓冲区大小，设置为1024*16*40 = 640k ,理论可以支持20000并发的返回
 RingBuffer rb_recv(RB_SIZE*40, false, false);              //存放接收到的业务pack的lock-free缓冲，第一个参数待确定，TODO
 std::vector<void*> p_send_mem;                             //writer:业务线程, reader:sockect线程, 用vector是因为自带长度
 std::vector<RingBuffer*> rb_send;                          //(RB_SIZE, false, false),多线程处理业务后要发包入缓冲，通知socket线程发送,有几个业务线程就有几个这样的rb，用vector是因为自带长度, 长度取值也跟并发要求相关
+moodycamel::ConcurrentQueue<ImPack> recv_cq(CQ_SIZE);               //支持mutil-producer, mutil-comsumer的queque, 从通道来的
+moodycamel::ConcurrentQueue<CustomEvent> send_cq(CQ_SIZE);          //支持mutil-producer, mutil-comsumer的queque， 业务处理完投递给socket线程的
 std::map<uv_tcp_t*, void*> g_mapConnCache;                 //socket映射连接，连接与缓冲区关联，目的是不去占用uv_tcp_t.data
 static int currConnNums = 0;
 
@@ -126,6 +130,7 @@ void echo_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
                             pack.UserInfoPtr = stream->data; //uv_tcp_t.data :UserInfo
                             pack.packBuf = cbuf;
                             pack.len = packLen;
+#if 0                        
                             if(rb_recv.push(&pack, sizeof(pack), p_recv_mem) == 0)
                             {
                                 LOG4_INFO("push pack of stream(%p) to ringbuffer, pack.packBuf(%p), pack.len(%d), rb_recv(%p), p_recv_mem(%p)",pack.stream,  pack.packBuf, pack.len, &rb_recv, p_recv_mem);
@@ -137,7 +142,18 @@ void echo_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
                                 delete []cbuf;//rb_recv满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
                                 return;
                             }
-
+#endif                      
+                            if(recv_cq.try_enqueue(pack) == true)
+                            {
+                                LOG4_INFO("push pack of stream(%p) to ringbuffer, pack.packBuf(%p), pack.len(%d), recv_cq(%p)",pack.stream,  pack.packBuf, pack.len, &recv_cq);
+                            }
+                            else
+                            {
+                                LOG4_WARN("==========drop pack cmd(%d) on stream(%p)!!!", ntohl(*(unsigned int*)(pack.packBuf + 4)), pack.stream);
+                                pack.packBuf = nullptr; //理论缓冲满了，数据没放进去
+                                delete []cbuf;//recv_cq 满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
+                                return;
+                            }       
                             leftLen -= packLen;
                             offset += packLen;
                         }
@@ -186,15 +202,16 @@ void on_parse_pack(const uv_stream_t* stream)
                 int packLen = ntohl(head.len);//包括头部的长度在内
                 if(iReadyReadLen >= packLen)
                 {
-                    char *buf = new char[packLen];
-                    pBuf->Read(buf, packLen);
+                    char *cbuf = new char[packLen];
+                    pBuf->Read(cbuf, packLen);
                     LOG4_INFO("recive pack cmd = %ld len = %ld, seq = %ld", ntohl(head.cmd), ntohl(head.len), ntohl(head.seq));
                     //业务数据包投递到无锁队列，由业务线程处理
                     ImPack pack;
                     pack.stream = stream; 
                     pack.UserInfoPtr = stream->data; //uv_tcp_t.data :UserInfo
-                    pack.packBuf = buf;
+                    pack.packBuf = cbuf;
                     pack.len = packLen;
+#if 0                    
                     if(rb_recv.push(&pack, sizeof(pack), p_recv_mem) == 0)//pack放到rb_recv, 能放下则放下
                     {
                         LOG4_INFO("push pack of stream(%p) to ringbuffer, pack.packBuf(%p), pack.len(%d), rb_recv(%p), p_recv_mem(%p)",pack.stream,  pack.packBuf, pack.len, &rb_recv, p_recv_mem);
@@ -203,9 +220,21 @@ void on_parse_pack(const uv_stream_t* stream)
                     {
                         LOG4_WARN("==========drop pack cmd(%d) on stream(%p)!!!", ntohl(*(unsigned int*)(pack.packBuf + 4)), pack.stream);
                         pack.packBuf = nullptr; //理论缓冲满了，数据没放进去
-                        delete []buf;
+                        delete []cbuf;
                         return;//rb_recv满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
                     }
+#endif               
+                    if(recv_cq.try_enqueue(pack) == true)
+                    {
+                        LOG4_INFO("push pack of stream(%p) to ringbuffer, pack.packBuf(%p), pack.len(%d), recv_cq(%p)",pack.stream,  pack.packBuf, pack.len, &recv_cq);
+                    }
+                    else
+                    {
+                        LOG4_WARN("==========drop pack cmd(%d) on stream(%p)!!!", ntohl(*(unsigned int*)(pack.packBuf + 4)), pack.stream);
+                        pack.packBuf = nullptr; //理论缓冲满了，数据没放进去
+                        delete []cbuf;//recv_cq 满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
+                        return;
+                    }       
                 }
                 else
                 {
@@ -271,6 +300,7 @@ void close_cb(uv_handle_t* handle)
     LOG4_INFO("close callback");
 }
 
+#if 0
 void uv_async_call(uv_async_t* handle)
 {
     LOG4_INFO("-------uv_async_all, deal with (%d) bufs data---------", rb_send.size());
@@ -329,6 +359,63 @@ void uv_async_call(uv_async_t* handle)
         }
     }
 }
+#endif
+#define FOR_ROUNDS 2000
+void uv_async_call(uv_async_t* handle)
+{
+    LOG4_INFO("-------uv_async_all, deal with (%d) bufs data---------", send_cq.size_approx());
+    // for(;;)
+    for(int i = 0; i < FOR_ROUNDS; i++) //避免任务执行过长时间
+    {
+        CustomEvent p_ctx;
+        if(send_cq.try_dequeue(p_ctx))
+        {
+            LOG4_INFO("uv_async_call pop CustomEvent from ringbuffer, event.stream(%p) event->ieventType(%d) event->istatus(%d), send_cq(%p)",
+                ((UserInfo*)p_ctx.userInfo)->conn, p_ctx.ieventType,  p_ctx.istatus , &send_cq);
+            switch (p_ctx.ieventType) 
+            {
+            case CustomEvent::EVENT_LOGIN_SUCCESSE:
+                {
+                    if(p_ctx.userInfo)
+                    {
+                        UserInfo* pUserInfo = (UserInfo*)p_ctx.userInfo;
+                        if(pUserInfo)
+                        {
+                            //心跳定时器
+                            {
+                                uv_timer_t*  heatBeatTimer= new uv_timer_t; 
+                                heatBeatTimer->data = (void*)p_ctx.userInfo;
+                                uv_timer_init(uv_default_loop(), heatBeatTimer);
+                                uv_timer_start(heatBeatTimer, uv_personal_heatBeat_timer_callback, HEARBEAT_PERIO, HEARBEAT_PERIO);//3.5min执行第一次，周期3.5min,心跳发送定时器
+                                pUserInfo->timer = heatBeatTimer; //方便后续回收
+                            }
+                            // //单聊消息定时器
+                            // {
+                            //     uv_timer_t*  msgTimer= new uv_timer_t; 
+                            //     msgTimer->data = (void*)p_ctx.userInfo;
+                            //     uv_timer_init(uv_default_loop(), msgTimer);
+                            //     uv_timer_start(msgTimer, uv_msg_timer_callback, 0, 1000);//next loop 执行第一次，周期1s,心跳发送定时器s
+                            //     pUserInfo->msgTimer = msgTimer;
+                            // }
+                        }
+                    }
+                }
+                break;
+            case CustomEvent::EVENT_LOGIN_FAILED:
+                // exit(0);//直接退出,方便日志查看
+                break;
+            default:
+                break;
+            }               
+        }
+        else
+        {
+            LOG4_INFO("send_cq is empty");
+            break;
+        }
+    }
+}
+
 //void (*uv_timer_cb)(uv_timer_t* handle);
 void uv_personal_heatBeat_timer_callback(uv_timer_t* handle)
 {

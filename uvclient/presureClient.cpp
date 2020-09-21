@@ -43,15 +43,18 @@ void uv_personal_conn_timeout_timer_callback(uv_timer_t* handle)
                 pUserInfo->authToken.c_str(), pUserInfo->conn);
         } 
     }
-    // else
-    // {
-    //     uv_timer_stop((uv_timer_t*)handle);
-    //     uv_close((uv_handle_t*)handle,[](uv_handle_t* handle){
-    //         if(handle){
-    //             delete (uv_timer_t*)handle;
-    //         }
-    //     });
-    // }
+    else //(state == E_TCP_ESHTABLISHED)， 连接可能还在或者不在了，中途连接是可能被事件触发回收的
+    {
+        if(pUserInfo->timeOutTimer)
+        {
+            uv_timer_stop((uv_timer_t*)handle);
+            uv_close((uv_handle_t*)handle,[](uv_handle_t* handle){
+                if(handle){
+                    delete (uv_timer_t*)handle;
+                }
+            });
+        }
+    }
 }
 
 //void (*uv_timer_cb)(uv_timer_t* handle);
@@ -291,6 +294,7 @@ int main(int argc, char* argv[])
     {
         worker_thread_num = TASK_THREAD_NUM; //限定业务线程数最大值
     }
+#if 0
     for(int i = 0; i < worker_thread_num; i++)//要注意防止数组越界
     {
         uvconn::p_send_mem.push_back(malloc(RB_SIZE));
@@ -299,6 +303,17 @@ int main(int argc, char* argv[])
         std::thread th(&Pack::StartThread, objTestImMsg);
         th.detach();
     }
+#endif
+    for(int i = 0; i < worker_thread_num; i++)//要注意防止数组越界
+    {
+        // uvconn::p_send_mem.push_back(malloc(RB_SIZE));
+        // uvconn::rb_send.push_back(new RingBuffer(RB_SIZE, false, false));
+        // ImMessagePack* objTestImMsg = new ImMessagePack(&uvconn::rb_recv, uvconn::p_recv_mem, uvconn::rb_send[i], uvconn::p_send_mem[i], async, i);
+        ImMessagePack* objTestImMsg = new ImMessagePack(&uvconn::recv_cq, &uvconn::send_cq, async, i);
+        std::thread th(&Pack::StartThread, objTestImMsg);
+        th.detach();
+    }
+
 
     //创建定时器
     UTimerData uvTimerData;

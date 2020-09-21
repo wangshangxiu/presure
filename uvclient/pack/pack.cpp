@@ -13,6 +13,16 @@ Pack::Pack(RingBuffer* recvRb, void *recvMem, RingBuffer* sendRb, void* sendMem,
     m_index(index)
 {
 }
+
+Pack::Pack(moodycamel::ConcurrentQueue<ImPack>* recvCQ, moodycamel::ConcurrentQueue<CustomEvent>* sendCQ, uv_async_t* uvAsyn, int index) :
+    m_recv_cq(recvCQ),
+    m_send_cq(sendCQ),
+    m_asyn_send(uvAsyn),
+    m_index(index)
+{
+
+}
+
 Pack::Pack():
     m_recvRb(nullptr),
     m_recvMem(nullptr),
