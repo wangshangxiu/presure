@@ -147,7 +147,6 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
                 printf("userId(%lld) devId(%s) token(%s) loginRsp successfully at %ld, cost time %ld\n", 
                     pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime, costTime);
                 //登录成功后需要为当前用户开启心跳定时器，这个步骤要回到socket线程里设置
-#if 1
                 CustomEvent event;
                 event.handle = pack.stream; 
                 event.userInfo = pUserInfo;//连接对应用户信息指针
@@ -173,7 +172,6 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
                     LOG4_WARN("==========drop pack cmd(%d) in thread(%d)'s sendRb(%p), !!!", ntohl(*(unsigned int*)(pack.packBuf + 4)),  uv_thread_self(), m_sendRb);
                     return;//m_sendRb满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
                 }
-#endif
 #endif
             }
             else
@@ -206,7 +204,6 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
             default:
                 break;
         }
-#if 1
         CustomEvent event;
         event.handle = pack.stream; 
         event.userInfo = pUserInfo;//连接对应用户信息指针
@@ -232,7 +229,6 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
             LOG4_WARN("==========drop pack cmd(%d) in thread(%d)'s sendRb(%p), !!!", ntohl(*(unsigned int*)(pack.packBuf + 4)),  uv_thread_self(), m_sendRb);
             return;//m_sendRb满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
         }
-#endif
 #endif
     }
 }

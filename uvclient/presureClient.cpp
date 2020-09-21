@@ -191,7 +191,7 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
     }
 }
 
-//每个周期检查同一时间发起连接的一批用户，如果状态处于连接中，（5s内登录态没改变），那么认为建连接超时
+//每个周期检查同一时间发起连接的一批用户，暂时不用这个函数
 void uv_check_conn_timeout_timer_callback(uv_timer_t* handle)
 {
     LOG4_INFO("---------uv_check_conn_timeout_timer_callback-------");
