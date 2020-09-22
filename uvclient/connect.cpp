@@ -7,8 +7,8 @@
 #define CQ_SIZE 32*10000
 namespace uvconn
 {
-void *p_recv_mem = malloc(RB_SIZE*40);                     //writer:sockect线程,reader:业务线程, rb_recv对应的缓冲区大小，设置为1024*16*40 = 640k ,理论可以支持20000并发的返回
-RingBuffer rb_recv(RB_SIZE*40, false, false);              //存放接收到的业务pack的lock-free缓冲，第一个参数待确定，TODO
+void *p_recv_mem = malloc(RB_SIZE*32);                     //writer:sockect线程,reader:业务线程, rb_recv对应的缓冲区大小，设置为1024*16*40 = 640k ,理论可以支持20000并发的返回
+RingBuffer rb_recv(RB_SIZE*32, false, false);              //存放接收到的业务pack的lock-free缓冲，第一个参数待确定，TODO
 std::vector<void*> p_send_mem;                             //writer:业务线程, reader:sockect线程, 用vector是因为自带长度
 std::vector<RingBuffer*> rb_send;                          //(RB_SIZE, false, false),多线程处理业务后要发包入缓冲，通知socket线程发送,有几个业务线程就有几个这样的rb，用vector是因为自带长度, 长度取值也跟并发要求相关
 moodycamel::ConcurrentQueue<ImPack> recv_cq(CQ_SIZE);               //支持mutil-producer, mutil-comsumer的queque, 从通道来的

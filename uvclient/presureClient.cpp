@@ -38,9 +38,12 @@ void uv_personal_conn_timeout_timer_callback(uv_timer_t* handle)
         if(pUserInfo->conn)//tcp超时，关闭连接，用户的定时器资源回收在关闭连接的回调中被关闭
         {
             uv_close((uv_handle_t*)pUserInfo->conn, uvconn::close_cb);
-            LOG4_ERROR("user(%ld) devid(%s) token(%s) on stream(%p) connect timeout...",
+            long long nowTime = globalFuncation::GetMicrosecond();
+            LOG4_ERROR("user(%ld) devid(%s) token(%s) on stream(%p) connect timeout,start connect at(%ld),finished time(%ld) and now(%ld), duration(%ld)...",
                 pUserInfo->userId, pUserInfo->devId.c_str(), 
-                pUserInfo->authToken.c_str(), pUserInfo->conn);
+                pUserInfo->authToken.c_str(), pUserInfo->conn,
+                pUserInfo->loginInfo.startConnectTime, pUserInfo->loginInfo.finConnectedTime,
+                nowTime, nowTime - pUserInfo->loginInfo.startConnectTime);
         } 
     }
     else //(state == E_TCP_ESHTABLISHED)， 连接可能还在或者不在了，中途连接是可能被事件触发回收的
@@ -91,7 +94,7 @@ void uv_creatconn_timer_callback(uv_timer_t* handle)
             checkTimeOutTimer->data = &listUserInfo[userInfoListCounter];
             uv_timer_init(uv_default_loop(), checkTimeOutTimer);
             uv_timer_start(checkTimeOutTimer, uv_personal_conn_timeout_timer_callback, 
-                TCP_CONNNECT_TIME_OVER, TCP_CONNNECT_TIME_OVER);//TCP_CONNNECT_TIME_OVER s后执行第一次,看TCP连接是否返回
+                TCP_CONNNECT_TIME_OVER*1000, 1*1000);//TCP_CONNNECT_TIME_OVER s后执行第一次,看TCP连接是否返回
             listUserInfo[userInfoListCounter].timeOutTimer = checkTimeOutTimer; //方便后续回收
         }
 #endif 
@@ -130,13 +133,13 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
         //其实batch就有这个效果，但比较方式能避免1s内客户端产生QPS的上限导致的问题
         if(regionIndexTime <= 1*1000*1000) 
         {
-            LOG4_ERROR("=========userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
+            // LOG4_ERROR("=========userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
             vUserLoginInOneSecond.push_back(&listUserInfo[userInfoListCounter]);
             userInfoListCounter++;
         }
         else
         {
-            LOG4_ERROR("=========userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
+            // LOG4_ERROR("=========userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
             regionIndex = userInfoListCounter; //下一区间的开始
             break; //最多一次循环batch次(客户端一个秒区间模拟的QPS值)，但如果遇到生产高QPS，耗时超出1s
         }
@@ -157,7 +160,7 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
         {
             loginSuccessfulCount++;
             long long loginCostTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime;
-            LOG4_ERROR("=========userId(%ld) login const time(%ld)", pUserInfo->userId, loginCostTime);
+            // LOG4_ERROR("=========userId(%ld) login const time(%ld)", pUserInfo->userId, loginCostTime);
             loginTimeCostSet.insert(loginCostTime); //目的是想得到最大最小值
             tatolCostTime += loginCostTime;
         }
@@ -175,7 +178,7 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
     float average = tatolCostTime/(loginSuccessfulCount*1.0);
     LOG4_WARN("-----------Time:%ld Login Tps (QPS(%d/s) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), error(%f), timeout(%d))-----------",
         globalFuncation::GetMicrosecond(),  vUserLoginInOneSecond.size(), tatolCostTime, *loginTimeCostSet.begin(), 
-        *loginTimeCostSet.crbegin(),  average, restError/(vUserLoginInOneSecond.size()*1.0) , loginTimeOverCount);
+        vUserLoginInOneSecond.size()?*loginTimeCostSet.crbegin():0,  average, restError/(vUserLoginInOneSecond.size()*1.0) , loginTimeOverCount);
 
     if(userInfoListCounter >= (int)listUserInfo.size())
     {
