@@ -69,6 +69,7 @@ void uv_creatconn_timer_callback(uv_timer_t* handle)
     UTimerData* pUTimerData = (UTimerData*)handle->data;
     std::vector<UserInfo>& listUserInfo = *(std::vector<UserInfo>*)pUTimerData->vUserInfo;
     int batch = pUTimerData->iBatch;
+    int timeout = pUTimerData->connTimeout;
     for(int i = 0;  userInfoListCounter < (int)listUserInfo.size() && i < batch ; i++)
     {
         uv_tcp_t* utcp = (uv_tcp_t*)malloc(sizeof(uv_tcp_t));
@@ -83,7 +84,8 @@ void uv_creatconn_timer_callback(uv_timer_t* handle)
         // uv_ip4_addr(dstIp.c_str(), dstPort, &dest);
         uv_ip4_addr(dstIpList[index].c_str(), dstPort, &dest);
         LOG4_DEBUG("user(%ld) devid(%s) token(%s) on stream(%p) start connect ...",
-            listUserInfo[userInfoListCounter].userId, listUserInfo[userInfoListCounter].devId.c_str(), listUserInfo[userInfoListCounter].authToken.c_str(), utcp);
+            listUserInfo[userInfoListCounter].userId, listUserInfo[userInfoListCounter].devId.c_str(), 
+            listUserInfo[userInfoListCounter].authToken.c_str(), utcp);
         uv_tcp_connect(uconn, utcp, (const struct sockaddr*)&dest, uvconn::on_connect);
         listUserInfo[userInfoListCounter].loginInfo.startConnectTime = globalFuncation::GetMicrosecond(); //设置发起tcp连接的时间， TaskTime
 
@@ -94,7 +96,7 @@ void uv_creatconn_timer_callback(uv_timer_t* handle)
             checkTimeOutTimer->data = &listUserInfo[userInfoListCounter];
             uv_timer_init(uv_default_loop(), checkTimeOutTimer);
             uv_timer_start(checkTimeOutTimer, uv_personal_conn_timeout_timer_callback, 
-                TCP_CONNNECT_TIME_OVER*1000, 1*1000);//TCP_CONNNECT_TIME_OVER s后执行第一次,看TCP连接是否返回
+                timeout*1000, 1*1000);//TCP_CONNNECT_TIME_OVER s后执行第一次,看TCP连接是否返回
             listUserInfo[userInfoListCounter].timeOutTimer = checkTimeOutTimer; //方便后续回收
         }
 #endif 
@@ -174,7 +176,8 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
         }
     }
 
-    // LOG4_WARN("-----------Time:%ld Login Tps (conroutin(%d) , perio (%d), tatolCostTime(%ld), QPS(%f))-----------",globalFuncation::GetMicrosecond(),  batch, perio, tatolCostTime, ((tatolCostTime/(batch*1.0))/perio));
+    //LOG4_WARN("-----------Time:%ld Login Tps (conroutin(%d) , perio (%d), tatolCostTime(%ld), QPS(%f))-----------",
+    //    globalFuncation::GetMicrosecond(),  batch, perio, tatolCostTime, ((tatolCostTime/(batch*1.0))/perio));
     float average = tatolCostTime/(loginSuccessfulCount*1.0);
     LOG4_WARN("-----------Time:%ld Login Tps (QPS(%d/s) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), error(%f), timeout(%d))-----------",
         globalFuncation::GetMicrosecond(),  vUserLoginInOneSecond.size(), tatolCostTime, *loginTimeCostSet.begin(), 
@@ -332,6 +335,13 @@ int main(int argc, char* argv[])
     {
         batch = CONNECTS_BACTH_PERIO;
     }
+    //"connet_timeout":100,
+    int iConnTimeOut = TCP_CONNNECT_TIME_OVER;
+    if(!g_cfg.Get("connet_timeout", iConnTimeOut))
+    {
+        iConnTimeOut = TCP_CONNNECT_TIME_OVER;
+    }
+    uvTimerData.connTimeout = iConnTimeOut;
     uvTimerData.iBatch = batch;
     uvTimerData.vUserInfo = &listUserInfo;//用户容器
 

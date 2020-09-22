@@ -165,6 +165,7 @@ typedef struct
     std::vector<UserInfo> *vUserInfo;
     int iBatch;//周期内发起的并发数
     int iPerio;//周期
+    int connTimeout;//连接超时时间
 }UTimerData;
 
 namespace globalFuncation
