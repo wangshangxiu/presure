@@ -53,6 +53,7 @@ void uv_personal_conn_timeout_timer_callback(uv_timer_t* handle)
                     delete (uv_timer_t*)handle;
                 }
             });
+            pUserInfo->timeOutTimer = nullptr;
         }
     }
 }
