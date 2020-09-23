@@ -42,6 +42,7 @@ void on_connect(uv_connect_t* req, int status)
         ImMessagePack::LoginReq(*pUserInfo, msgBody);
         Pack::SendMsg(handle, 1001, msgBody.SerializeAsString(), false);
         pUserInfo->loginInfo.loginTime = globalFuncation::GetMicrosecond();//设置用户登录时间， [finConnectedTime, loginTime]
+        LOG4_WARN("===userId(%ld) ready for login cost time (%ld)", pUserInfo->userId, pUserInfo->loginInfo.loginTime - pUserInfo->loginInfo.finConnectedTime);
     }
     else 
     {
@@ -369,10 +370,10 @@ void uv_async_call(uv_async_t* handle)
     }
 }
 #endif
-#define FOR_ROUNDS 200
+#define FOR_ROUNDS 100
 void uv_async_call(uv_async_t* handle)
 {
-    LOG4_INFO("-------uv_async_all, deal with (%d) bufs data---------", send_cq.size_approx());
+    LOG4_WARN("-------uv_async_all, deal with (%d) bufs data---------", send_cq.size_approx());
     // for(;;)
     for(int i = 0; i < FOR_ROUNDS; i++) //避免任务执行过长时间
     {
