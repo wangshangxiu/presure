@@ -118,6 +118,7 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
         return;
     }
     UserInfo* pUserInfo = (UserInfo*)pack.UserInfoPtr;
+    pUserInfo->loginInfo.loginRspTime = globalFuncation::GetMicrosecond(); //设置用户登录返回时间， TaskTime
     int status = ntohs(*(unsigned short*)(pack.packBuf + 14));//移动14个字节就是status
     if(status == 0)//成功的情况
     {
@@ -139,7 +140,7 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
                     LOG4_ERROR("decrypt sessionKey error, sharedKey(%s)", sharedKey.c_str());
                     return;
                 }
-                pUserInfo->loginInfo.loginRspTime = globalFuncation::GetMicrosecond(); //设置用户登录返回时间， TaskTime
+                // pUserInfo->loginInfo.loginRspTime = globalFuncation::GetMicrosecond(); //设置用户登录返回时间， TaskTime
                 // long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.loginTime;
                 long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime; //（登录返回时间-TCP建连接时间）
                 LOG4_INFO("userId(%lld) devId(%s) token(%s) loginRsp successfully at %ld, cost time %ld", 
@@ -189,7 +190,7 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
         im_login::LoginRsp loginRsp;
         loginRsp.ParseFromString(msgbody.body());
         LOG4_ERROR("loginRsp failed: (%s)", loginRsp.DebugString().c_str());
-        pUserInfo->loginInfo.loginRspTime = globalFuncation::GetMicrosecond();//登录返回并处理完的时间
+        // pUserInfo->loginInfo.loginRspTime = globalFuncation::GetMicrosecond();//登录返回并处理完的时间
         long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime; //（登录返回时间-TCP建连接时间）
         LOG4_ERROR("userId(%lld) devId(%s) token(%s) loginRsp failed at %ld, cost time %ld", 
             pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime, costTime);
@@ -238,7 +239,7 @@ void ImMessagePack::HeatBeatReq(const UserInfo& userInfo, MsgBody& msgBody)
     
 
 }
-void ImMessagePack::HearBeatRsp(const ImPack& pack)
+void ImMessagePack::HearBeatRsp(const ImPack& pack)//心跳发出去后是需要定时检查心跳回复的，超时不会，主动断开连接重连，这样才能有效回收TCP
 {
     LOG4_INFO("HearBeatRsp from stream(%p), cmdId(%d), pack->len(%d)",pack.stream, ntohl(*((unsigned int*)(pack.packBuf + 4))), pack.len);
 }

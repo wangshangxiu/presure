@@ -23,6 +23,7 @@ void on_connect(uv_connect_t* req, int status)
     //req里包含了连接、用户信息
     UserInfo* pUserInfo = (UserInfo*)req->data;
     uv_tcp_t *handle = (uv_tcp_t*)req->handle;
+    pUserInfo->loginInfo.finConnectedTime = globalFuncation::GetMicrosecond(); //设置tcp连接完成的时间，可能失败也可能成功
     if(status == 0)
     {
         //为新建立的连接配一个固定环形缓冲
@@ -33,23 +34,27 @@ void on_connect(uv_connect_t* req, int status)
         }
         uv_read_start((uv_stream_t*)handle , alloc_buffer, echo_read);
 
-        pUserInfo->loginInfo.finConnectedTime = globalFuncation::GetMicrosecond(); //设置tcp连接成功的时间， TaskTime
         pUserInfo->loginInfo.state = E_TCP_ESHTABLISHED;   //连接确立状态,TODO，应该打印建立连接的时间
         currConnNums++;//统计建立连接的数量，当满足login_qps的连接数后，可以划分一个区间
-        //登录
+        LOG4_ERROR("current enstablished connets nums %d", currConnNums);
+        // 登录
         MsgBody msgBody;
         ImMessagePack::LoginReq(*pUserInfo, msgBody);
         Pack::SendMsg(handle, 1001, msgBody.SerializeAsString(), false);
     }
     else 
     {
-        auto iter = g_mapConnCache.find((uv_tcp_t*)handle); //这里判断的原因在于开启了超时定时器，在这之前TCP和用户相关资源已经被回收，不能再回收一次
-        if(iter != g_mapConnCache.end())
-        {
-            uv_close((uv_handle_t*)handle, close_cb);
-            LOG4_ERROR("userId(%ld) handle(%p)'s status = %d, errorName(%s) , errorString(%s)" , 
-                ((UserInfo*)handle->data)->userId,handle, status, uv_err_name(status), uv_strerror(status));
-        }
+        //这里判断的原因在于开启了超时定时器，在这之前TCP和用户相关资源已经被回收，不能再回收一次
+        // auto iter = g_mapConnCache.find((uv_tcp_t*)handle); 
+        // if(iter != g_mapConnCache.end())
+        // {
+        pUserInfo->loginInfo.state = E_TCP_TIMEOUT; //都暂认为是超时（目前只测连接速度，也只有超时之分）
+        uv_close((uv_handle_t*)handle, close_cb);
+        LOG4_ERROR("userId(%ld) handle(%p)'s status = %d, errorName(%s) , errorString(%s)" , 
+            ((UserInfo*)handle->data)->userId,handle, status, uv_err_name(status), uv_strerror(status));
+        // }
+        // LOG4_ERROR("userId(%ld) handle(%p)'s status = %d, errorName(%s) , errorString(%s)" , 
+        //         ((UserInfo*)handle->data)->userId,handle, status, uv_err_name(status), uv_strerror(status));
     }
 
     if(req) free(req);//无论成功与否，把过程量uv_connect_t回收了，但如果成功连接已经保存起来
@@ -60,6 +65,7 @@ void on_connect(uv_connect_t* req, int status)
 //void (*uv_alloc_cb)(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
 void alloc_buffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) 
 {
+    LOG4_WARN("---%s-----", __FUNCTION__);
     static char cacheBuf[TCP_BUFFER_LEN * 4]={0};
     if(handle)
     {
@@ -75,17 +81,17 @@ void alloc_buffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
             if(pBuf->isEmpty())
             {
                 LOG4_INFO("pBuf is empty, uv_buf.len is %d ", sizeof(cacheBuf));
-                buf->len = TCP_BUFFER_LEN *4;
+                buf->len = TCP_BUFFER_LEN *4; //pBuf为空，可以读sizeof(cacheBuf),因为先处理cacheBuf
             }
             else if(pBuf->isFull())
             {
                 LOG4_INFO("pBuf is full");
-                buf->len = 0;
+                buf->len = 0; //pBuf为满，至此不读TCP内核缓冲的数据，等pBuf被处理后，下一轮再读
             }
             else
             {
                 LOG4_INFO("pBuf has free space");
-                buf->len = (TCP_BUFFER_LEN - pBuf->GetLength());//传入环形缓冲的最大空闲长度,环形缓冲是固定长非线程安全
+                buf->len = (TCP_BUFFER_LEN - pBuf->GetLength()); //pBuf有数据，那最多能从内核缓冲读回它的空闲长度数据，因为读回的数据要先放pBuf
             }
             buf->base = (char*)&cacheBuf[0];//根据环形缓冲区的剩余空间，决定取多长的socket数据到cacheBuf
         }
@@ -95,12 +101,14 @@ void alloc_buffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
 //void (*uv_read_cb)(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
 void echo_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
 {
-    if(nread == UV_EOF)
+    // if(nread == UV_EOF) (UV_EBUSY,UV_EAGAIN) (UV_ETIMEDOUT,UV_ECONNREFUSED,UV_ECONNRESET)
+    LOG4_WARN("---%s, nread %d-----", __FUNCTION__, nread);
+    if(nread < 0)
     {
         uv_close((uv_handle_t*)stream, close_cb);
         return;
     }
-    else
+    else //nread>=0 , 这里（nread == 0）不代表连接关闭，关闭信号nread<0
     {
         auto iter = g_mapConnCache.find((uv_tcp_t*)stream);
         if(iter == g_mapConnCache.end())
@@ -297,7 +305,7 @@ void close_cb(uv_handle_t* handle)
         }
         free(handle);
     }
-    LOG4_INFO("close callback");
+    LOG4_ERROR("close callback");
 }
 
 #if 0
@@ -417,7 +425,7 @@ void uv_async_call(uv_async_t* handle)
 }
 
 //void (*uv_timer_cb)(uv_timer_t* handle);
-void uv_personal_heatBeat_timer_callback(uv_timer_t* handle)
+void uv_personal_heatBeat_timer_callback(uv_timer_t* handle) //心跳除了发出去还需要定时处理响应，没响应则断开重连
 {
     LOG4_INFO("---------uv_personal_heatBeat_timer_callback-------");
     UserInfo* pUserInfo = (UserInfo*)handle->data;

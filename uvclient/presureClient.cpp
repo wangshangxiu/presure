@@ -21,8 +21,8 @@
 #include "CJsonObject.hpp"
 #include "comm.h"
 
-#define USE_CUSTOM_TIMEOUT_TIMER
-#define TCP_CONNNECT_TIME_OVER 30                       //30s
+// #define USE_CUSTOM_TIMEOUT_TIMER
+#define TCP_CONNNECT_TIME_OVER   15                     //30s
 util::CJsonObject g_cfg;                                //配置
 std::vector<UserInfo> listUserInfo;                     //模拟用户列表
 std::vector<std::string>  dstIpList;                    //IP列表
@@ -62,7 +62,7 @@ void uv_personal_conn_timeout_timer_callback(uv_timer_t* handle)
 }
 
 //void (*uv_timer_cb)(uv_timer_t* handle);
-void uv_creatconn_timer_callback(uv_timer_t* handle)
+void uv_creatconn_timer_callback(uv_timer_t* handle) //周期为perio
 {
     LOG4_INFO("-------uv_creatconn_timer_callback-------");
     static int userInfoListCounter = 0;
@@ -122,8 +122,8 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
     LOG4_INFO("---------uv_logintask_statistics_timer_callback-------");
     UTimerData* pUTimerData = (UTimerData*)handle->data;
     std::vector<UserInfo>& listUserInfo = *(std::vector<UserInfo>*)pUTimerData->vUserInfo;
-    int perio = pUTimerData->iPerio;//周期
-    int batch = pUTimerData->iBatch;//并发数, 但batch很大时,可能并不能在一秒内全部发出,所以在下边统计时需要判断batch批次内同1s发出的
+    int perio = pUTimerData->iPerio;//周期,ms
+    int batch = pUTimerData->iBatch*(1000/perio);//并发数, 但batch很大时,可能并不能在一秒内全部发出,所以在下边统计时需要判断batch批次内同1s发出的
     static int userInfoListCounter = 0;
     static int regionIndex = 0;     //同1s区间内第一个发出的请求
     //计算周期内指定并发数的QPS
@@ -135,13 +135,13 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
         //其实batch就有这个效果，但比较方式能避免1s内客户端产生QPS的上限导致的问题
         if(regionIndexTime <= 1*1000*1000) 
         {
-            // LOG4_ERROR("=========userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
+            LOG4_ERROR("=========userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
             vUserLoginInOneSecond.push_back(&listUserInfo[userInfoListCounter]);
             userInfoListCounter++;
         }
         else
         {
-            // LOG4_ERROR("=========userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
+            LOG4_ERROR("=========userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
             regionIndex = userInfoListCounter; //下一区间的开始
             break; //最多一次循环batch次(客户端一个秒区间模拟的QPS值)，但如果遇到生产高QPS，耗时超出1s
         }
@@ -180,8 +180,8 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
     //    globalFuncation::GetMicrosecond(),  batch, perio, tatolCostTime, ((tatolCostTime/(batch*1.0))/perio));
     float average = tatolCostTime/(loginSuccessfulCount*1.0);
     LOG4_WARN("-----------Time:%ld Login Tps (QPS(%d/s) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), error(%f), timeout(%d))-----------",
-        globalFuncation::GetMicrosecond(),  vUserLoginInOneSecond.size(), tatolCostTime, *loginTimeCostSet.begin(), 
-        vUserLoginInOneSecond.size()?*loginTimeCostSet.crbegin():0,  average, restError/(vUserLoginInOneSecond.size()*1.0) , loginTimeOverCount);
+        globalFuncation::GetMicrosecond(),  vUserLoginInOneSecond.size(), tatolCostTime, loginTimeCostSet.size()?*loginTimeCostSet.begin():0, 
+        loginTimeCostSet.size()?*loginTimeCostSet.rbegin():0,  average, restError/(vUserLoginInOneSecond.size()*1.0) , loginTimeOverCount);
 
     if(userInfoListCounter >= (int)listUserInfo.size())
     {
@@ -198,47 +198,47 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
     }
 }
 
-//每个周期检查同一时间发起连接的一批用户，暂时不用这个函数
-void uv_check_conn_timeout_timer_callback(uv_timer_t* handle)
-{
-    LOG4_INFO("---------uv_check_conn_timeout_timer_callback-------");
-    UTimerData* pUTimerData = (UTimerData*)handle->data;
-    std::vector<UserInfo>& listUserInfo = *(std::vector<UserInfo>*)pUTimerData->vUserInfo;
-    // int perio = pUTimerData->iPerio;//周期,这里不用
-    int batch = pUTimerData->iBatch;//每周期发起的QPS数
-    static int userInfoListCounter = 0;
-    static int tcpTimeOverNums = 0;
-    for(int i = 0; userInfoListCounter < (int)listUserInfo.size() && i < batch; i++)
-    {
-        if((listUserInfo[userInfoListCounter].loginInfo.state == E_TCP_CONNECTING) && 
-            (globalFuncation::GetMicrosecond() - listUserInfo[userInfoListCounter].loginInfo.startConnectTime > TCP_CONNNECT_TIME_OVER))
-        {
-            listUserInfo[userInfoListCounter].loginInfo.state = E_TCP_TIMEOUT;
-            if(listUserInfo[userInfoListCounter].conn)//tcp超时，关闭连接
-            {
-                uv_close((uv_handle_t*)listUserInfo[userInfoListCounter].conn, uvconn::close_cb);
-                LOG4_ERROR("user(%ld) devid(%s) token(%s) on stream(%p) connect timeout...",
-                    listUserInfo[userInfoListCounter].userId, listUserInfo[userInfoListCounter].devId.c_str(), 
-                    listUserInfo[userInfoListCounter].authToken.c_str(), listUserInfo[userInfoListCounter].conn);
-                tcpTimeOverNums++;
-            }   
-        }
-        userInfoListCounter++;
-    }
+// //每个周期检查同一时间发起连接的一批用户，暂时不用这个函数
+// void uv_check_conn_timeout_timer_callback(uv_timer_t* handle)
+// {
+//     LOG4_INFO("---------uv_check_conn_timeout_timer_callback-------");
+//     UTimerData* pUTimerData = (UTimerData*)handle->data;
+//     std::vector<UserInfo>& listUserInfo = *(std::vector<UserInfo>*)pUTimerData->vUserInfo;
+//     // int perio = pUTimerData->iPerio;//周期,这里不用
+//     int batch = pUTimerData->iBatch;//每周期发起的QPS数
+//     static int userInfoListCounter = 0;
+//     static int tcpTimeOverNums = 0;
+//     for(int i = 0; userInfoListCounter < (int)listUserInfo.size() && i < batch; i++)
+//     {
+//         if((listUserInfo[userInfoListCounter].loginInfo.state == E_TCP_CONNECTING) && 
+//             (globalFuncation::GetMicrosecond() - listUserInfo[userInfoListCounter].loginInfo.startConnectTime > TCP_CONNNECT_TIME_OVER))
+//         {
+//             listUserInfo[userInfoListCounter].loginInfo.state = E_TCP_TIMEOUT;
+//             if(listUserInfo[userInfoListCounter].conn)//tcp超时，关闭连接
+//             {
+//                 uv_close((uv_handle_t*)listUserInfo[userInfoListCounter].conn, uvconn::close_cb);
+//                 LOG4_ERROR("user(%ld) devid(%s) token(%s) on stream(%p) connect timeout...",
+//                     listUserInfo[userInfoListCounter].userId, listUserInfo[userInfoListCounter].devId.c_str(), 
+//                     listUserInfo[userInfoListCounter].authToken.c_str(), listUserInfo[userInfoListCounter].conn);
+//                 tcpTimeOverNums++;
+//             }   
+//         }
+//         userInfoListCounter++;
+//     }
 
-    if(userInfoListCounter >= (int)listUserInfo.size())
-    {
-        LOG4_ERROR("check_conn_timeout_timer completed, timeover user num(%d), rate(%f)", tcpTimeOverNums, tcpTimeOverNums/userInfoListCounter*1.0);
-        uv_timer_stop(handle);
-        userInfoListCounter = 0;
-        tcpTimeOverNums = 0;
-        uv_close((uv_handle_t*)handle, [](uv_handle_t* handle){
-            if(handle){
-                delete (uv_timer_t*)handle;
-            }
-        });
-    }
-}
+//     if(userInfoListCounter >= (int)listUserInfo.size())
+//     {
+//         LOG4_ERROR("check_conn_timeout_timer completed, timeover user num(%d), rate(%f)", tcpTimeOverNums, tcpTimeOverNums/userInfoListCounter*1.0);
+//         uv_timer_stop(handle);
+//         userInfoListCounter = 0;
+//         tcpTimeOverNums = 0;
+//         uv_close((uv_handle_t*)handle, [](uv_handle_t* handle){
+//             if(handle){
+//                 delete (uv_timer_t*)handle;
+//             }
+//         });
+//     }
+// }
 
 int main(int argc, char* argv[])
 {
@@ -324,10 +324,10 @@ int main(int argc, char* argv[])
 
     //创建定时器
     UTimerData uvTimerData;
-    int perio = 1;
+    int perio = 5; //这里默认为5ms，意思是认为请求发出的循环周期为50us, 5ms内可以完成100个请求发出
     if(!g_cfg.Get("create_conn_timer_perio", perio))
     {
-        perio = 1;
+        perio = 5;
     }
     uvTimerData.iPerio = perio;
     int batch = CONNECTS_BACTH_PERIO;
@@ -348,7 +348,7 @@ int main(int argc, char* argv[])
     uv_timer_t*  creatConnTimer= new uv_timer_t; 
     creatConnTimer->data = &uvTimerData;//挂接定时器用到的数据
     uv_timer_init(uv_default_loop(), creatConnTimer);
-    uv_timer_start(creatConnTimer, uv_creatconn_timer_callback, 0, perio*1000);//next loop 执行第一次, 并周期为perio秒
+    uv_timer_start(creatConnTimer, uv_creatconn_timer_callback, 0, perio);//next loop 执行第一次, 并周期为perio ms
 
     uv_timer_t*  loginTaskStatisticsTimer= new uv_timer_t; 
     loginTaskStatisticsTimer->data = &uvTimerData;//挂接定时器用到的数据
