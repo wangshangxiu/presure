@@ -23,7 +23,7 @@ void on_connect(uv_connect_t* req, int status)
     //req里包含了连接、用户信息
     UserInfo* pUserInfo = (UserInfo*)req->data;
     uv_tcp_t *handle = (uv_tcp_t*)req->handle;
-    pUserInfo->loginInfo.finConnectedTime = globalFuncation::GetMicrosecond(); //设置tcp连接完成的时间，可能失败也可能成功
+    pUserInfo->loginInfo.finConnectedTime = globalFuncation::GetMicrosecond(); //设置tcp连接完成的时间，可能失败也可能成功,[startConnectTime, finConnectedTime]
     if(status == 0)
     {
         //为新建立的连接配一个固定环形缓冲
@@ -41,6 +41,7 @@ void on_connect(uv_connect_t* req, int status)
         MsgBody msgBody;
         ImMessagePack::LoginReq(*pUserInfo, msgBody);
         Pack::SendMsg(handle, 1001, msgBody.SerializeAsString(), false);
+        pUserInfo->loginInfo.loginTime = globalFuncation::GetMicrosecond();//设置用户登录时间， [finConnectedTime, loginTime]
     }
     else 
     {
@@ -368,7 +369,7 @@ void uv_async_call(uv_async_t* handle)
     }
 }
 #endif
-#define FOR_ROUNDS 2000
+#define FOR_ROUNDS 200
 void uv_async_call(uv_async_t* handle)
 {
     LOG4_INFO("-------uv_async_all, deal with (%d) bufs data---------", send_cq.size_approx());

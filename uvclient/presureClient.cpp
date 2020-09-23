@@ -87,7 +87,7 @@ void uv_creatconn_timer_callback(uv_timer_t* handle) //周期为perio
             listUserInfo[userInfoListCounter].userId, listUserInfo[userInfoListCounter].devId.c_str(), 
             listUserInfo[userInfoListCounter].authToken.c_str(), utcp);
         uv_tcp_connect(uconn, utcp, (const struct sockaddr*)&dest, uvconn::on_connect);
-        listUserInfo[userInfoListCounter].loginInfo.startConnectTime = globalFuncation::GetMicrosecond(); //设置发起tcp连接的时间， TaskTime
+        listUserInfo[userInfoListCounter].loginInfo.startConnectTime = globalFuncation::GetMicrosecond(); //设置发起tcp连接的时间， [startConnectTime,-]
 
 #ifdef USE_CUSTOM_TIMEOUT_TIMER
         //超时定时器
@@ -130,7 +130,8 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
     std::vector<UserInfo*> vUserLoginInOneSecond;
     for(int i = 0; userInfoListCounter < (int)listUserInfo.size() && i < batch ; i++)
     {
-        long long regionIndexTime = listUserInfo[userInfoListCounter].loginInfo.startConnectTime -  listUserInfo[regionIndex].loginInfo.startConnectTime;
+        // long long regionIndexTime = listUserInfo[userInfoListCounter].loginInfo.startConnectTime -  listUserInfo[regionIndex].loginInfo.startConnectTime;
+        long long regionIndexTime = listUserInfo[userInfoListCounter].loginInfo.loginTime -  listUserInfo[regionIndex].loginInfo.loginTime;
         //把同1s内发出请求的用户作为一个区间来统计，客户端发出QPS是可以调节的，这个比较方式也总能准确的把一个个区间的QPS分离出来
         //其实batch就有这个效果，但比较方式能避免1s内客户端产生QPS的上限导致的问题
         if(regionIndexTime <= 1*1000*1000) 
@@ -161,7 +162,8 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
         if(pUserInfo->loginInfo.loginStatus == 0) //登录成功
         {
             loginSuccessfulCount++;
-            long long loginCostTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime;
+            // long long loginCostTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime;
+            long long loginCostTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.loginTime;
             // LOG4_ERROR("=========userId(%ld) login const time(%ld)", pUserInfo->userId, loginCostTime);
             loginTimeCostSet.insert(loginCostTime); //目的是想得到最大最小值
             tatolCostTime += loginCostTime;

@@ -66,7 +66,7 @@ void ImMessagePack::LoginReq(UserInfo& userInfo, MsgBody& msgBody)
     static const std::string& rsaKeyPath = "./conf/rsakey/public_key.pem";
     static RSA* rsaPublicKey = readRsaPublicKeyFromFile(const_cast<char*>(rsaKeyPath.c_str())); 
     {
-        userInfo.loginInfo.loginTime = globalFuncation::GetMicrosecond();//设置用户登录时间， TaskTime
+        // userInfo.loginInfo.loginTime = globalFuncation::GetMicrosecond();//设置用户登录时间， TaskTime
         LOG4_TRACE("userId(%ld) devId(%s) token(%s) logining at %ld ...", userInfo.userId, userInfo.devId.c_str(), userInfo.authToken.c_str(), userInfo.loginInfo.loginTime);
         printf("userId(%ld) devId(%s) token(%s) logining at %ld ...\n", userInfo.userId, userInfo.devId.c_str(), userInfo.authToken.c_str(), userInfo.loginInfo.loginTime);
         im_login::Login loginReq;
@@ -110,6 +110,8 @@ void ImMessagePack::LoginReq(UserInfo& userInfo, MsgBody& msgBody)
 
 void ImMessagePack::LoginRsp(const ImPack& pack)
 {
+    UserInfo* pUserInfo = (UserInfo*)pack.UserInfoPtr;
+    pUserInfo->loginInfo.loginRspTime = globalFuncation::GetMicrosecond(); //设置用户登录返回时间， [loginTime, loginRspTime]
     //登录最外层都不加密，但成功登录，LoginRsp会加密
     MsgBody msgbody;
     if(!msgbody.ParseFromArray(pack.packBuf + sizeof(tagAppMsgHead), pack.len - sizeof(tagAppMsgHead)))//移动相应的位置就是数据包了
@@ -117,8 +119,6 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
         LOG4_ERROR("pb parse error , msgbody(%s)", msgbody.DebugString().c_str());
         return;
     }
-    UserInfo* pUserInfo = (UserInfo*)pack.UserInfoPtr;
-    pUserInfo->loginInfo.loginRspTime = globalFuncation::GetMicrosecond(); //设置用户登录返回时间， TaskTime
     int status = ntohs(*(unsigned short*)(pack.packBuf + 14));//移动14个字节就是status
     if(status == 0)//成功的情况
     {
