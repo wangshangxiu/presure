@@ -340,26 +340,30 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
 
 int main(int argc, char* argv[])
 {
-    if(argc < 4) 
+    if(argc < 3) 
     {
-        printf("Usage: %s hostAddress port  cfgfile\n", argv[0]);
+        printf("Usage: %s processNo  cfgfile\n", argv[0]);
         return 0;
     }
-    //从命令行参数获取目标IP列表、端口
-    globalFuncation::StringSplit(argv[1], dstIpList);
-    if(dstIpList.size() == 0 )
-    {
-        printf("ip list error , ips = %s\n", argv[1]);
-        return 0;
-    }
-    dstPort = std::atoi(argv[2]);
-    srand(time(nullptr));
+    LOG4_WARN("No %d process start...", std::atoi(argv[1]));
     //加载配置文件
-    if(!globalFuncation::LoadConfig(g_cfg, argv[3]))
+    if(!globalFuncation::LoadConfig(g_cfg, argv[2]))
     {
         printf("Init failed, Load config error\n");
         return 0;
     }
+
+    //从配置文件获取目标IP列表、端口
+    std::string strIpList;
+    g_cfg.Get("server_ip_list", strIpList);
+    g_cfg.Get("server_dst_port", dstPort);
+    globalFuncation::StringSplit(strIpList, dstIpList);
+    if(dstIpList.size() == 0 )
+    {
+        printf("ip list error , ips = %s\n", strIpList.c_str());
+        return 0;
+    }
+    srand(time(nullptr));
 
     //初始化日志打印库
     if(!Logger::GetInstance()->InitLogger(g_cfg))
@@ -368,23 +372,15 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    //从文件加载用户数据
+    //从文件加载用户数据,每个进程从样本不同的位置偏移开始加载指定大小的用户数据
     std::string strSampleDataPath;
-    std::string strSampleDataSize;
     int sampleDataSize = 0;
+    int totalSampleDataSize = 0;
     g_cfg.Get("user_data_path", strSampleDataPath);
-    g_cfg.Get("sample_data_size", strSampleDataSize);
-    g_cfg.Get("sample_data_total_size", sampleDataSize);
-    // strSampleDataPath += "id_test_";
-    // strSampleDataPath += strSampleDataSize;
-    // strSampleDataPath +=".json";
-    // if(!globalFuncation::LoadUserInfoFromJsonFile(listUserInfo, strSampleDataPath))
-    // {
-    //     LOG4_ERROR("load user.json error");
-    //     return 0;
-    // }
+    g_cfg.Get("sample_data_size", sampleDataSize); //每个进程从同一个样本数据加载部分数据的大小
+    g_cfg.Get("sample_data_total_size", totalSampleDataSize); //同一份样本数据的总大小，暂时不用
     strSampleDataPath += "id.csv";
-    if(!globalFuncation::LoadUserInfoFromCVSFile(listUserInfo, strSampleDataPath, 0, sampleDataSize))
+    if(!globalFuncation::LoadUserInfoFromCVSFile(listUserInfo, strSampleDataPath, std::atoi(argv[1]), sampleDataSize))
     {
         LOG4_ERROR("load id.cvs error");
         return 0;

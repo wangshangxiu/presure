@@ -63,6 +63,7 @@ bool LoadUserInfoFromJsonFile(std::vector<UserInfo>& userInfo, const std::string
 
 //@param offset 需要根据本进程smpleSize样本大小，以及开启的io thread所分配到的线程序号，以及多少个客户端在协同工作计算所得；
 //offset = smpleSize*clientNo + threadIndex*(smpleSize/threadNum), 样本数据是从offset开始的，包含offset位置那条
+////压测采用启动多个进程方式，每个进程只有一个IO线程，那么offset就是进程序号，然后smpleSize就是每个进程需要加载的样本
 bool LoadUserInfoFromCVSFile(std::vector<UserInfo>& userInfo, const std::string& strPath, int offset, int smpleSize)
 {
 	//ios_base
@@ -84,10 +85,10 @@ bool LoadUserInfoFromCVSFile(std::vector<UserInfo>& userInfo, const std::string&
 	// istream& getline (istream& is, string& str, char delim);
 	// istream& getline (istream& is, string& str);
 	int lineCounter = 0;
-    while (std::getline(inFile, lineStr) && ((offset + smpleSize) > lineCounter))  
+    while (std::getline(inFile, lineStr) && ((offset*smpleSize + smpleSize) > lineCounter))  
     {  
 		lineCounter++;
-		if(offset > lineCounter)
+		if(offset*smpleSize > lineCounter)
 		{
 			continue;
 		}
