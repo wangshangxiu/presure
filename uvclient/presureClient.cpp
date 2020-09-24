@@ -8,8 +8,11 @@
 #include <fstream>
 #include <thread>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <uv.h>
+#include "proctitle_helper.h"
 #include "connect.h"
 #include "msg.pb.h"
 #include "login.pb.h"
@@ -24,7 +27,7 @@
 // #define USE_CUSTOM_TIMEOUT_TIMER
 #define TCP_CONNNECT_TIME_OVER   15                     //30s
 util::CJsonObject g_cfg;                                //配置
-std::vector<UserInfo> listUserInfo;                     //模拟用户列表
+// std::vector<UserInfo> listUserInfo;                     //模拟用户列表
 std::vector<std::string>  dstIpList;                    //IP列表
 std::string dstIp;                                      //单个IP
 int dstPort = 0;                                        //端口
@@ -340,14 +343,39 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
 
 int main(int argc, char* argv[])
 {
+#ifdef UNUSE_CREATE_PROCESS_SELF
+    // if(argc < 3) 
+    // {
+    //     printf("Usage: %s processNo  cfgfile\n", argv[0]);
+    //     return 0;
+    // }
+    // printf("No %d process start...\n", std::atoi(argv[1]));
+    // //加载配置文件
+    // if(!globalFuncation::LoadConfig(g_cfg, argv[2]))
+    // {
+    //     printf("Init failed, Load config error\n");
+    //     return 0;
+    // }
+
+    // //从配置文件获取目标IP列表、端口
+    // std::string strIpList;
+    // g_cfg.Get("server_ip_list", strIpList);
+    // g_cfg.Get("server_dst_port", dstPort);
+    // globalFuncation::StringSplit(strIpList, dstIpList);
+    // if(dstIpList.size() == 0 )
+    // {
+    //     printf("ip list error , ips = %s\n", strIpList.c_str());
+    //     return 0;
+    // }
+#else
     if(argc < 3) 
     {
-        printf("Usage: %s processNo  cfgfile\n", argv[0]);
+        printf("Usage: %s  cfgfile processNum\n", argv[0]);
         return 0;
     }
-    LOG4_WARN("No %d process start...", std::atoi(argv[1]));
+    ngx_init_setproctitle(argc, argv);
     //加载配置文件
-    if(!globalFuncation::LoadConfig(g_cfg, argv[2]))
+    if(!globalFuncation::LoadConfig(g_cfg, argv[1]))
     {
         printf("Init failed, Load config error\n");
         return 0;
@@ -363,105 +391,137 @@ int main(int argc, char* argv[])
         printf("ip list error , ips = %s\n", strIpList.c_str());
         return 0;
     }
-    srand(time(nullptr));
-
-    //初始化日志打印库
-    if(!Logger::GetInstance()->InitLogger(g_cfg))
+#endif 
+    int processNum =  std::atoi(argv[2]);
+    int pid[processNum];
+    int chileId = 0;
+    int i = 0;
+    for(; i <processNum; i++)
     {
-        printf("Init logger failed\n");
-        return 0;
+        if((chileId = fork()) == -1)
+        {
+            printf("fork error!");
+            exit(EXIT_FAILURE);
+        }
+        else if(chileId == 0)
+        {
+            srand(time(nullptr));
+            pid[i] = getpid();
+            char szProcessName[64] = {0};
+            snprintf(szProcessName, sizeof(szProcessName), "%s_%d", argv[0], i);
+            ngx_setproctitle(szProcessName);
+            //初始化日志打印库
+            if(!Logger::GetInstance()->InitLogger(g_cfg))
+            {
+                printf("Init logger failed\n");
+                return 0;
+            }
+            std::vector<UserInfo> listUserInfo;                     //模拟用户列表
+            //从文件加载用户数据,每个进程从样本不同的位置偏移开始加载指定大小的用户数据
+            std::string strSampleDataPath;
+            int sampleDataSize = 0;
+            int totalSampleDataSize = 0;
+            g_cfg.Get("user_data_path", strSampleDataPath);
+            g_cfg.Get("sample_data_size", sampleDataSize); //每个进程从同一个样本数据加载部分数据的大小
+            g_cfg.Get("sample_data_total_size", totalSampleDataSize); //同一份样本数据的总大小，暂时不用
+            strSampleDataPath += "id.csv";
+#ifdef UNUSE_CREATE_PROCESS_SELF
+            if(!globalFuncation::LoadUserInfoFromCVSFile(listUserInfo, strSampleDataPath, std::atoi(argv[1]), sampleDataSize))
+#else
+            if(!globalFuncation::LoadUserInfoFromCVSFile(listUserInfo, strSampleDataPath, i, sampleDataSize)) //i为进程号
+#endif    
+            {
+                LOG4_ERROR("load id.cvs error");
+                return 0;
+            }
+            LOG4_DEBUG("listUserInfo size(%d)", listUserInfo.size());
+
+            //启动woker线程
+            uv_async_t* async = new uv_async_t;
+            uv_async_init(uv_default_loop(), async, uvconn::uv_async_call);//用于woker线程异步通知主线程
+            int worker_thread_num = 1; 
+            if(!g_cfg.Get("worker_thread_num", worker_thread_num) || (worker_thread_num > TASK_THREAD_NUM))
+            {
+                worker_thread_num = TASK_THREAD_NUM; //限定业务线程数最大值
+            }
+        #if 0
+            for(int i = 0; i < worker_thread_num; i++)//要注意防止数组越界
+            {
+                uvconn::p_send_mem.push_back(malloc(RB_SIZE));
+                uvconn::rb_send.push_back(new RingBuffer(RB_SIZE, false, false));
+                ImMessagePack* objTestImMsg = new ImMessagePack(&uvconn::rb_recv, uvconn::p_recv_mem, uvconn::rb_send[i], uvconn::p_send_mem[i], async, i);
+                std::thread th(&Pack::StartThread, objTestImMsg);
+                th.detach();
+            }
+        #endif
+            for(int i = 0; i < worker_thread_num; i++)//要注意防止数组越界
+            {
+                // uvconn::p_send_mem.push_back(malloc(RB_SIZE));
+                // uvconn::rb_send.push_back(new RingBuffer(RB_SIZE, false, false));
+                // ImMessagePack* objTestImMsg = new ImMessagePack(&uvconn::rb_recv, uvconn::p_recv_mem, uvconn::rb_send[i], uvconn::p_send_mem[i], async, i);
+                ImMessagePack* objTestImMsg = new ImMessagePack(&uvconn::recv_cq, &uvconn::send_cq, async, i);
+                std::thread th(&Pack::StartThread, objTestImMsg);
+                th.detach();
+            }
+
+
+            //创建定时器
+            UTimerData uvTimerData;
+            int perio = 5; //这里默认为5ms，意思是认为请求发出的循环周期为50us, 5ms内可以完成100个请求发出
+            if(!g_cfg.Get("create_conn_timer_perio", perio))
+            {
+                perio = 5;
+            }
+            uvTimerData.iPerio = perio;
+            int batch = CONNECTS_BACTH_PERIO;
+            if(!g_cfg.Get("create_conn_nums_pertime", batch))
+            {
+                batch = CONNECTS_BACTH_PERIO;
+            }
+            //"connet_timeout":100,
+            int iConnTimeOut = TCP_CONNNECT_TIME_OVER;
+            if(!g_cfg.Get("connet_timeout", iConnTimeOut))
+            {
+                iConnTimeOut = TCP_CONNNECT_TIME_OVER;
+            }
+            uvTimerData.connTimeout = iConnTimeOut;
+            uvTimerData.iBatch = batch;
+            uvTimerData.vUserInfo = &listUserInfo;//用户容器
+
+            uv_timer_t*  creatConnTimer= new uv_timer_t; 
+            creatConnTimer->data = &uvTimerData;//挂接定时器用到的数据
+            uv_timer_init(uv_default_loop(), creatConnTimer);
+            uv_timer_start(creatConnTimer, uv_creatconn_timer_callback, 0, perio);//next loop 执行第一次, 并周期为perio ms
+        #if 0
+            //关于统计也可以开启一个独立线程定时统计，这样就不影响主线程了
+            uv_timer_t*  loginTaskStatisticsTimer= new uv_timer_t; 
+            loginTaskStatisticsTimer->data = &uvTimerData;//挂接定时器用到的数据
+            uv_timer_init(uv_default_loop(), loginTaskStatisticsTimer);
+            uv_timer_start(loginTaskStatisticsTimer, uv_logintask_statistics_timer_callback, iConnTimeOut*2*1000, 1*1000);//2倍TCP_CONNNECT_TIME_OVER后执行第一次, 目的是充分等到每条TCP的超时定时器已经触发
+        #endif
+            std::thread th(uv_logintask_statistics_independent_thread, &uvTimerData); //统计线程
+            th.detach();
+            // uv_timer_t*  checkTcpConnectTimeOutTimer= new uv_timer_t; 
+            // checkTcpConnectTimeOutTimer->data = &uvTimerData;//挂接定时器用到的数据
+            // uv_timer_init(uv_default_loop(), checkTcpConnectTimeOutTimer);
+            // uv_timer_start(checkTcpConnectTimeOutTimer, uv_check_conn_timeout_timer_callback, 5*1000, TCP_CONNNECT_TIME_OVER*1000);//程序启动5s后执行第一次, 并周期为3s
+
+            // uv_timer_t*  msgTimer= new uv_timer_t; 
+            // msgTimer->data = &uvTimerData;
+            // uv_timer_init(uv_default_loop(), msgTimer);
+            // uv_timer_start(msgTimer, uv_msg_timer_callback, 1*1000, 1*1000);//1s后启动, 并周期为1s,消息发送定时器
+
+            return uv_run(uv_default_loop(), UV_RUN_DEFAULT);
+        }
+        else //父进程
+        {
+
+        }
     }
 
-    //从文件加载用户数据,每个进程从样本不同的位置偏移开始加载指定大小的用户数据
-    std::string strSampleDataPath;
-    int sampleDataSize = 0;
-    int totalSampleDataSize = 0;
-    g_cfg.Get("user_data_path", strSampleDataPath);
-    g_cfg.Get("sample_data_size", sampleDataSize); //每个进程从同一个样本数据加载部分数据的大小
-    g_cfg.Get("sample_data_total_size", totalSampleDataSize); //同一份样本数据的总大小，暂时不用
-    strSampleDataPath += "id.csv";
-    if(!globalFuncation::LoadUserInfoFromCVSFile(listUserInfo, strSampleDataPath, std::atoi(argv[1]), sampleDataSize))
-    {
-        LOG4_ERROR("load id.cvs error");
-        return 0;
-    }
-    LOG4_DEBUG("listUserInfo size(%d)", listUserInfo.size());
-
-    //启动woker线程
-    uv_async_t* async = new uv_async_t;
-    uv_async_init(uv_default_loop(), async, uvconn::uv_async_call);//用于woker线程异步通知主线程
-    int worker_thread_num = 1; 
-    if(!g_cfg.Get("worker_thread_num", worker_thread_num) || (worker_thread_num > TASK_THREAD_NUM))
-    {
-        worker_thread_num = TASK_THREAD_NUM; //限定业务线程数最大值
-    }
-#if 0
-    for(int i = 0; i < worker_thread_num; i++)//要注意防止数组越界
-    {
-        uvconn::p_send_mem.push_back(malloc(RB_SIZE));
-        uvconn::rb_send.push_back(new RingBuffer(RB_SIZE, false, false));
-        ImMessagePack* objTestImMsg = new ImMessagePack(&uvconn::rb_recv, uvconn::p_recv_mem, uvconn::rb_send[i], uvconn::p_send_mem[i], async, i);
-        std::thread th(&Pack::StartThread, objTestImMsg);
-        th.detach();
-    }
-#endif
-    for(int i = 0; i < worker_thread_num; i++)//要注意防止数组越界
-    {
-        // uvconn::p_send_mem.push_back(malloc(RB_SIZE));
-        // uvconn::rb_send.push_back(new RingBuffer(RB_SIZE, false, false));
-        // ImMessagePack* objTestImMsg = new ImMessagePack(&uvconn::rb_recv, uvconn::p_recv_mem, uvconn::rb_send[i], uvconn::p_send_mem[i], async, i);
-        ImMessagePack* objTestImMsg = new ImMessagePack(&uvconn::recv_cq, &uvconn::send_cq, async, i);
-        std::thread th(&Pack::StartThread, objTestImMsg);
-        th.detach();
-    }
-
-
-    //创建定时器
-    UTimerData uvTimerData;
-    int perio = 5; //这里默认为5ms，意思是认为请求发出的循环周期为50us, 5ms内可以完成100个请求发出
-    if(!g_cfg.Get("create_conn_timer_perio", perio))
-    {
-        perio = 5;
-    }
-    uvTimerData.iPerio = perio;
-    int batch = CONNECTS_BACTH_PERIO;
-    if(!g_cfg.Get("create_conn_nums_pertime", batch))
-    {
-        batch = CONNECTS_BACTH_PERIO;
-    }
-    //"connet_timeout":100,
-    int iConnTimeOut = TCP_CONNNECT_TIME_OVER;
-    if(!g_cfg.Get("connet_timeout", iConnTimeOut))
-    {
-        iConnTimeOut = TCP_CONNNECT_TIME_OVER;
-    }
-    uvTimerData.connTimeout = iConnTimeOut;
-    uvTimerData.iBatch = batch;
-    uvTimerData.vUserInfo = &listUserInfo;//用户容器
-
-    uv_timer_t*  creatConnTimer= new uv_timer_t; 
-    creatConnTimer->data = &uvTimerData;//挂接定时器用到的数据
-    uv_timer_init(uv_default_loop(), creatConnTimer);
-    uv_timer_start(creatConnTimer, uv_creatconn_timer_callback, 0, perio);//next loop 执行第一次, 并周期为perio ms
-#if 0
-    //关于统计也可以开启一个独立线程定时统计，这样就不影响主线程了
-    uv_timer_t*  loginTaskStatisticsTimer= new uv_timer_t; 
-    loginTaskStatisticsTimer->data = &uvTimerData;//挂接定时器用到的数据
-    uv_timer_init(uv_default_loop(), loginTaskStatisticsTimer);
-    uv_timer_start(loginTaskStatisticsTimer, uv_logintask_statistics_timer_callback, iConnTimeOut*2*1000, 1*1000);//2倍TCP_CONNNECT_TIME_OVER后执行第一次, 目的是充分等到每条TCP的超时定时器已经触发
-#endif
-    std::thread th(uv_logintask_statistics_independent_thread, &uvTimerData); //统计线程
-    th.detach();
-    // uv_timer_t*  checkTcpConnectTimeOutTimer= new uv_timer_t; 
-    // checkTcpConnectTimeOutTimer->data = &uvTimerData;//挂接定时器用到的数据
-    // uv_timer_init(uv_default_loop(), checkTcpConnectTimeOutTimer);
-    // uv_timer_start(checkTcpConnectTimeOutTimer, uv_check_conn_timeout_timer_callback, 5*1000, TCP_CONNNECT_TIME_OVER*1000);//程序启动5s后执行第一次, 并周期为3s
-
-    // uv_timer_t*  msgTimer= new uv_timer_t; 
-    // msgTimer->data = &uvTimerData;
-    // uv_timer_init(uv_default_loop(), msgTimer);
-    // uv_timer_start(msgTimer, uv_msg_timer_callback, 1*1000, 1*1000);//1s后启动, 并周期为1s,消息发送定时器
-
-    return uv_run(uv_default_loop(), UV_RUN_DEFAULT);
+    for(int i=0;i< processNum ;i++)
+	{
+		waitpid(pid[i],NULL,0);
+	}
 }
 

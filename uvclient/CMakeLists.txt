@@ -31,7 +31,7 @@ ADD_DEFINITIONS( -g -W -Wno-deprecated -D_REENTRANT -D_FILE_OFFSET_BITS=64 -DAC_
 -DAC_HAS_DEBUG -DLINUX_DAEMON -std=c++11)
 
 AUX_SOURCE_DIRECTORY(${CMAKE_CURRENT_SOURCE_DIR}  SRC_LIST)
-INCLUDE_DIRECTORIES(./ ./encrypt ./pb ./pack ./buffer ./json ./logger ./include ./include/libuv   ./include/openssl ./include/libsignal)
+INCLUDE_DIRECTORIES(./ ./encrypt ./pb ./pack ./buffer ./json ./logger  ./unix ./include ./include/libuv   ./include/openssl ./include/libsignal)
 LINK_DIRECTORIES(./ ../lib ./lib)
 #ADD_XXXX必须在TARGET_LINK_LIBRARIES前面，否则会报错
 ADD_EXECUTABLE(presureClient ${SRC_LIST})
