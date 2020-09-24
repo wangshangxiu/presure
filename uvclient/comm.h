@@ -166,6 +166,7 @@ typedef struct
     int iBatch;//周期内发起的并发数
     int iPerio;//周期
     int connTimeout;//连接超时时间
+    uv_loop_t* uvLoop = nullptr;
 }UTimerData;
 
 namespace globalFuncation

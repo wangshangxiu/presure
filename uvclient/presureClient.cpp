@@ -73,10 +73,11 @@ void uv_creatconn_timer_callback(uv_timer_t* handle) //周期为perio
     std::vector<UserInfo>& listUserInfo = *(std::vector<UserInfo>*)pUTimerData->vUserInfo;
     int batch = pUTimerData->iBatch;
     int timeout = pUTimerData->connTimeout;
+    uv_loop_t* uvLoop = (uv_loop_t*)pUTimerData->uvLoop;
     for(int i = 0;  userInfoListCounter < (int)listUserInfo.size() && i < batch ; i++)
     {
         uv_tcp_t* utcp = (uv_tcp_t*)malloc(sizeof(uv_tcp_t));
-        uv_tcp_init(uv_default_loop(), utcp);
+        uv_tcp_init(uvLoop, utcp);
         utcp->data = &listUserInfo[userInfoListCounter];//全局的<连接，用户>映射
         listUserInfo[userInfoListCounter].conn = utcp;//业务层的用户架构关联网络层的连接，指针
         uv_connect_t* uconn = (uv_connect_t*)malloc(sizeof(uv_connect_t));
@@ -97,7 +98,7 @@ void uv_creatconn_timer_callback(uv_timer_t* handle) //周期为perio
         {
             uv_timer_t*  checkTimeOutTimer = new uv_timer_t; 
             checkTimeOutTimer->data = &listUserInfo[userInfoListCounter];
-            uv_timer_init(uv_default_loop(), checkTimeOutTimer);
+            uv_timer_init(uvLoop, checkTimeOutTimer);
             uv_timer_start(checkTimeOutTimer, uv_personal_conn_timeout_timer_callback, 
                 timeout*1000, 1*1000);//TCP_CONNNECT_TIME_OVER s后执行第一次,看TCP连接是否返回
             listUserInfo[userInfoListCounter].timeOutTimer = checkTimeOutTimer; //方便后续回收
@@ -394,8 +395,18 @@ int main(int argc, char* argv[])
 #endif 
     int processNum =  std::atoi(argv[2]);
     int pid[processNum];
+    uv_loop_t* uvLoop = new uv_loop_t[processNum];
+    for(int i = 0; i < processNum; i++)
+    {
+        if(uvLoop && uv_loop_init(&uvLoop[i]) < 0)
+        {
+            printf("init array uvLoop[%d] error!\n", processNum);
+            return 0;
+        }
+    }
     int chileId = 0;
     int i = 0;
+
     for(; i <processNum; i++)
     {
         if((chileId = fork()) == -1)
@@ -438,7 +449,8 @@ int main(int argc, char* argv[])
 
             //启动woker线程
             uv_async_t* async = new uv_async_t;
-            uv_async_init(uv_default_loop(), async, uvconn::uv_async_call);//用于woker线程异步通知主线程
+            async->data = &uvLoop[i];
+            uv_async_init(&uvLoop[i], async, uvconn::uv_async_call);//用于woker线程异步通知主线程
             int worker_thread_num = 1; 
             if(!g_cfg.Get("worker_thread_num", worker_thread_num) || (worker_thread_num > TASK_THREAD_NUM))
             {
@@ -487,31 +499,32 @@ int main(int argc, char* argv[])
             uvTimerData.connTimeout = iConnTimeOut;
             uvTimerData.iBatch = batch;
             uvTimerData.vUserInfo = &listUserInfo;//用户容器
+            uvTimerData.uvLoop = &uvLoop[i];
 
             uv_timer_t*  creatConnTimer= new uv_timer_t; 
             creatConnTimer->data = &uvTimerData;//挂接定时器用到的数据
-            uv_timer_init(uv_default_loop(), creatConnTimer);
+            uv_timer_init(&uvLoop[i], creatConnTimer);
             uv_timer_start(creatConnTimer, uv_creatconn_timer_callback, 0, perio);//next loop 执行第一次, 并周期为perio ms
         #if 0
             //关于统计也可以开启一个独立线程定时统计，这样就不影响主线程了
             uv_timer_t*  loginTaskStatisticsTimer= new uv_timer_t; 
             loginTaskStatisticsTimer->data = &uvTimerData;//挂接定时器用到的数据
-            uv_timer_init(uv_default_loop(), loginTaskStatisticsTimer);
+            uv_timer_init(&uvLoop[i], loginTaskStatisticsTimer);
             uv_timer_start(loginTaskStatisticsTimer, uv_logintask_statistics_timer_callback, iConnTimeOut*2*1000, 1*1000);//2倍TCP_CONNNECT_TIME_OVER后执行第一次, 目的是充分等到每条TCP的超时定时器已经触发
         #endif
             std::thread th(uv_logintask_statistics_independent_thread, &uvTimerData); //统计线程
             th.detach();
             // uv_timer_t*  checkTcpConnectTimeOutTimer= new uv_timer_t; 
             // checkTcpConnectTimeOutTimer->data = &uvTimerData;//挂接定时器用到的数据
-            // uv_timer_init(uv_default_loop(), checkTcpConnectTimeOutTimer);
+            // uv_timer_init(&uvLoop[i], checkTcpConnectTimeOutTimer);
             // uv_timer_start(checkTcpConnectTimeOutTimer, uv_check_conn_timeout_timer_callback, 5*1000, TCP_CONNNECT_TIME_OVER*1000);//程序启动5s后执行第一次, 并周期为3s
 
             // uv_timer_t*  msgTimer= new uv_timer_t; 
             // msgTimer->data = &uvTimerData;
-            // uv_timer_init(uv_default_loop(), msgTimer);
+            // uv_timer_init(&uvLoop[i], msgTimer);
             // uv_timer_start(msgTimer, uv_msg_timer_callback, 1*1000, 1*1000);//1s后启动, 并周期为1s,消息发送定时器
 
-            return uv_run(uv_default_loop(), UV_RUN_DEFAULT);
+            return uv_run(&uvLoop[i], UV_RUN_DEFAULT);
         }
         else //父进程
         {

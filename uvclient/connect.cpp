@@ -314,6 +314,7 @@ void close_cb(uv_handle_t* handle)
 void uv_async_call(uv_async_t* handle)
 {
     LOG4_INFO("-------uv_async_all, deal with (%d) bufs data---------", rb_send.size());
+    uv_loop_t* uvLoop = (uv_loop_t*)handle->data;
     for(int i = 0; i < rb_send.size(); i++)
     {
         for(;;)
@@ -337,7 +338,7 @@ void uv_async_call(uv_async_t* handle)
                                 {
                                     uv_timer_t*  heatBeatTimer= new uv_timer_t; 
                                     heatBeatTimer->data = (void*)p_ctx->userInfo;
-                                    uv_timer_init(uv_default_loop(), heatBeatTimer);
+                                    uv_timer_init(uvLoop, heatBeatTimer);
                                     uv_timer_start(heatBeatTimer, uv_personal_heatBeat_timer_callback, HEARBEAT_PERIO, HEARBEAT_PERIO);//3.5min执行第一次，周期3.5min,心跳发送定时器
                                     pUserInfo->timer = heatBeatTimer; //方便后续回收
                                 }
@@ -345,7 +346,7 @@ void uv_async_call(uv_async_t* handle)
                                 // {
                                 //     uv_timer_t*  msgTimer= new uv_timer_t; 
                                 //     msgTimer->data = (void*)p_ctx->userInfo;
-                                //     uv_timer_init(uv_default_loop(), msgTimer);
+                                //     uv_timer_init(uvLoop, msgTimer);
                                 //     uv_timer_start(msgTimer, uv_msg_timer_callback, 0, 1000);//next loop 执行第一次，周期1s,心跳发送定时器s
                                 //     pUserInfo->msgTimer = msgTimer;
                                 // }
@@ -375,6 +376,7 @@ void uv_async_call(uv_async_t* handle)
 {
     LOG4_WARN("-------uv_async_all, deal with (%d) bufs data---------", send_cq.size_approx());
     // for(;;)
+    uv_loop_t* uvLoop = (uv_loop_t*)handle->data;
     for(int i = 0; i < FOR_ROUNDS; i++) //避免任务执行过长时间
     {
         CustomEvent p_ctx;
@@ -395,7 +397,7 @@ void uv_async_call(uv_async_t* handle)
                             {
                                 uv_timer_t*  heatBeatTimer= new uv_timer_t; 
                                 heatBeatTimer->data = (void*)p_ctx.userInfo;
-                                uv_timer_init(uv_default_loop(), heatBeatTimer);
+                                uv_timer_init(uvLoop, heatBeatTimer);
                                 uv_timer_start(heatBeatTimer, uv_personal_heatBeat_timer_callback, HEARBEAT_PERIO, HEARBEAT_PERIO);//3.5min执行第一次，周期3.5min,心跳发送定时器
                                 pUserInfo->timer = heatBeatTimer; //方便后续回收
                             }
@@ -403,7 +405,7 @@ void uv_async_call(uv_async_t* handle)
                             // {
                             //     uv_timer_t*  msgTimer= new uv_timer_t; 
                             //     msgTimer->data = (void*)p_ctx.userInfo;
-                            //     uv_timer_init(uv_default_loop(), msgTimer);
+                            //     uv_timer_init(uvLoop, msgTimer);
                             //     uv_timer_start(msgTimer, uv_msg_timer_callback, 0, 1000);//next loop 执行第一次，周期1s,心跳发送定时器s
                             //     pUserInfo->msgTimer = msgTimer;
                             // }
