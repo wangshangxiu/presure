@@ -37,7 +37,7 @@ void on_connect(uv_connect_t* req, int status)
         pUserInfo->loginInfo.state = E_TCP_ESHTABLISHED;   //连接确立状态,TODO，应该打印建立连接的时间
         currConnNums++;//统计建立连接的数量，当满足login_qps的连接数后，可以划分一个区间
         LOG4_ERROR("current enstablished connets nums %d", currConnNums);
-        // 登录
+        // 登录 ,这个移到定时器里登录，好同一时间给出登录QPS
         MsgBody msgBody;
         ImMessagePack::LoginReq(*pUserInfo, msgBody);
         Pack::SendMsg(handle, 1001, msgBody.SerializeAsString(), false);
@@ -371,7 +371,7 @@ void uv_async_call(uv_async_t* handle)
     }
 }
 #endif
-#define FOR_ROUNDS 100
+#define FOR_ROUNDS 10
 void uv_async_call(uv_async_t* handle)
 {
     LOG4_WARN("-------uv_async_all, deal with (%d) bufs data---------", send_cq.size_approx());

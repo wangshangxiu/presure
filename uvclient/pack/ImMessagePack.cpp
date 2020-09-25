@@ -111,6 +111,7 @@ void ImMessagePack::LoginReq(UserInfo& userInfo, MsgBody& msgBody)
 void ImMessagePack::LoginRsp(const ImPack& pack)
 {
     UserInfo* pUserInfo = (UserInfo*)pack.UserInfoPtr;
+    pUserInfo->loginInfo.state = E_TCP_LOGINED;
     pUserInfo->loginInfo.loginRspTime = globalFuncation::GetMicrosecond(); //设置用户登录返回时间， [loginTime, loginRspTime]
     //登录最外层都不加密，但成功登录，LoginRsp会加密
     MsgBody msgbody;

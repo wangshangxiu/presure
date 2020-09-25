@@ -89,9 +89,9 @@ enum
     E_TCP_CONNECTING = 0,
     E_TCP_ESHTABLISHED = 1,
     E_TCP_TIMEOUT = 2,     //TCP超时
-    // E_LOGINRSP_PACK_DROP = 3, //客户端主动丢掉登录返回的包
+    E_TCP_LOGINING = 3, //登录已经返回
+    E_TCP_LOGINED = 4, //登录已经返回
 };
-
 typedef struct 
 {
     long long startConnectTime = 0; //开始连接时间
@@ -167,6 +167,7 @@ typedef struct
     int iPerio;//周期
     int connTimeout;//连接超时时间
     uv_loop_t* uvLoop = nullptr;
+    int processNum = 0;
 }UTimerData;
 
 namespace globalFuncation
@@ -175,6 +176,9 @@ long long GetMicrosecond();
 bool LoadConfig(util::CJsonObject& oConf, const char* strConfFile);
 //解析CSV比JSON要快多了
 bool LoadUserInfoFromJsonFile(std::vector<UserInfo>& userInfo, const std::string& strPath);
+#if 0
+bool LoadUserInfoFromCVSFile(std::vector<std::vector<UserInfo>>& vvUserInfo, const std::string& strPath, int smpleSize);
+#endif
 bool LoadUserInfoFromCVSFile(std::vector<UserInfo>& userInfo, const std::string& strPath, int offset = 0, int smpleSize = 200000);
 void StringSplit(const std::string& strSrc, std::vector<std::string>& vec, char c= ':');
 };

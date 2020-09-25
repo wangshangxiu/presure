@@ -9,6 +9,11 @@ long long GetMicrosecond()
 	return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
+long long GetSecond()
+{
+	return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
 bool LoadConfig(util::CJsonObject& oConf, const char* strConfFile)
 {
     std::ifstream fin(strConfFile);
@@ -79,6 +84,7 @@ bool LoadUserInfoFromCVSFile(std::vector<UserInfo>& userInfo, const std::string&
 	//				stringstream
 	// 				fstream
     // 读文件  
+
     std::ifstream inFile(strPath.c_str(), std::ios::in); //./data/id.cvs
     std::string lineStr;  
     // std::vector<std::vector<std::string>> strArray;  
@@ -114,10 +120,68 @@ bool LoadUserInfoFromCVSFile(std::vector<UserInfo>& userInfo, const std::string&
 		
         // strArray.push_back(lineArray);  
     } 
-
+	// long long curr = globalFuncation::GetMicrosecond();
+	// LOG4_ERROR("Load userinfo cost time %ld", curr - now);
 	return true; 
 }
+#if 0
+bool LoadUserInfoFromCVSFile(std::vector<std::vector<UserInfo>>& vvUserInfo, const std::string& strPath, int smpleSize)
+{
+	//ios_base
+	//	ios
+	// 		istream				
+	//			ifstream
+	// 			istringstream
+	//		ostream				
+	//			ofstream
+	//			ostringstream
+	//		[istream, ostream]	
+	// 			iostream
+	//				stringstream
+	// 				fstream
+    // 读文件  
+	// long long now = globalFuncation::GetMicrosecond();
+    std::ifstream inFile(strPath.c_str(), std::ios::in); //./data/id.cvs
+    std::string lineStr;  
+    // std::vector<std::vector<std::string>> strArray;  
+	// istream& getline (istream& is, string& str, char delim);
+	// istream& getline (istream& is, string& str);
+	int lineCounter = 0;
+	int offset = 0;
+    while (std::getline(inFile, lineStr) && ((offset*smpleSize + smpleSize) > lineCounter))  
+    {  
+		lineCounter++;
+		if(offset*smpleSize > lineCounter)
+		{
+			continue;
+		}
+        // 打印整行字符串  
+        std::cout << lineStr << " " << lineCounter << std::endl;  
+        // 存成二维表结构  
+        std::stringstream ss(lineStr);  
+        std::string str;  
+        std::vector<std::string> lineArray; //cvs读出来的三个字段
+        // 按照逗号分隔  
+        while (std::getline(ss, str, ','))
+		{
+			lineArray.push_back(str); 
+		}  
 
+		UserInfo info;
+        info.userId = atoll(lineArray[0].c_str());//db有
+        info.loginSeq = 0;//程序产生
+        info.devId = lineArray[1]; //设备ID，db有
+        info.authToken = lineArray[2];//验证token，db有
+        info.aesKey;//开始是自己，成功换成服务器生成的
+        // userInfo.push_back(info);
+		vvUserInfo[offset].push_back(info);
+    } 
+
+	// long long curr = globalFuncation::GetMicrosecond();
+	// LOG4_ERROR("Load userinfo cost time %ld", curr - now);
+	return true; 
+}
+#endif
 void StringSplit(const std::string& strSrc, std::vector<std::string>& vec, char c)
 {
 	if (strSrc.size() > 0)

@@ -7,6 +7,7 @@
 #include <map>
 #include <fstream>
 #include <thread>
+#include <atomic> 
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -31,7 +32,7 @@ util::CJsonObject g_cfg;                                //配置
 std::vector<std::string>  dstIpList;                    //IP列表
 std::string dstIp;                                      //单个IP
 int dstPort = 0;                                        //端口
-
+std::atomic<int> synLogin(0);                          //原子变量，同步登录
 void uv_personal_conn_timeout_timer_callback(uv_timer_t* handle)
 {
     UserInfo* pUserInfo = (UserInfo*)handle->data;
@@ -112,6 +113,62 @@ void uv_creatconn_timer_callback(uv_timer_t* handle) //周期为perio
         LOG4_INFO("create connect timer completed, close timer...");
         uv_timer_stop(handle);
         userInfoListCounter = 0;
+        uv_close((uv_handle_t*)handle, [](uv_handle_t* handle){
+            if(handle){
+                delete (uv_timer_t*)handle;
+            }
+        });
+    }
+}
+
+//void (*uv_timer_cb)(uv_timer_t* handle);
+void uv_login_timer_callback(uv_timer_t* handle) //周期为perio
+{
+    LOG4_INFO("-------uv_creatconn_timer_callback-------");
+    static int loginCounter = 0;
+    UTimerData* pUTimerData = (UTimerData*)handle->data;
+    std::vector<UserInfo>& listUserInfo = *(std::vector<UserInfo>*)pUTimerData->vUserInfo;
+    int batch = pUTimerData->iBatch;
+    int timeout = pUTimerData->connTimeout;
+    uv_loop_t* uvLoop = (uv_loop_t*)pUTimerData->uvLoop;
+    int processNum = pUTimerData->processNum;
+    ////登录 ,这个移到定时器里登录，好让同一时间给出登录QPS
+    // static bool done = false;
+    // if(synLogin == processNum)
+    // {
+        for(auto iter = listUserInfo.begin(); iter != listUserInfo.end(); iter++)
+        {
+            if(iter->loginInfo.state == E_TCP_ESHTABLISHED)
+            {
+                long long now = globalFuncation::GetMicrosecond();
+                MsgBody msgBody;
+                ImMessagePack::LoginReq(*iter, msgBody);
+                Pack::SendMsg((uv_tcp_t*)iter->conn, 1001, msgBody.SerializeAsString(), false);
+                iter->loginInfo.state = E_TCP_LOGINING;
+                iter->loginInfo.loginTime = globalFuncation::GetMicrosecond();//设置用户登录时间， [finConnectedTime, loginTime]
+                LOG4_WARN("===userId(%ld) ready for login cost time (%ld)", iter->userId, iter->loginInfo.loginTime - now);
+            }
+            else if(iter->loginInfo.state == E_TCP_LOGINED)
+            {
+                loginCounter++;
+            }
+        }
+    //     done = false;
+    // }
+    // else
+    // {
+    //     if(!done)
+    //     {
+    //         ++synLogin; //原子整数++
+    //     }
+    //     done = true;
+    // }
+
+    if(loginCounter == listUserInfo.size())
+    {
+        LOG4_INFO("create connect timer completed, close timer...");
+        uv_timer_stop(handle);
+        loginCounter = 0;
         uv_close((uv_handle_t*)handle, [](uv_handle_t* handle){
             if(handle){
                 delete (uv_timer_t*)handle;
@@ -374,6 +431,7 @@ int main(int argc, char* argv[])
         printf("Usage: %s  cfgfile processNum\n", argv[0]);
         return 0;
     }
+    long long proceStartTime = globalFuncation::GetMicrosecond();
     ngx_init_setproctitle(argc, argv);
     //加载配置文件
     if(!globalFuncation::LoadConfig(g_cfg, argv[1]))
@@ -407,6 +465,7 @@ int main(int argc, char* argv[])
     int chileId = 0;
     int i = 0;
 
+    // long long proceStartTime = globalFuncation::GetMicrosecond();
     for(; i <processNum; i++)
     {
         if((chileId = fork()) == -1)
@@ -439,14 +498,21 @@ int main(int argc, char* argv[])
 #ifdef UNUSE_CREATE_PROCESS_SELF
             if(!globalFuncation::LoadUserInfoFromCVSFile(listUserInfo, strSampleDataPath, std::atoi(argv[1]), sampleDataSize))
 #else
+	        long long now = globalFuncation::GetMicrosecond();
             if(!globalFuncation::LoadUserInfoFromCVSFile(listUserInfo, strSampleDataPath, i, sampleDataSize)) //i为进程号
 #endif    
             {
                 LOG4_ERROR("load id.cvs error");
                 return 0;
             }
-            LOG4_DEBUG("listUserInfo size(%d)", listUserInfo.size());
-
+            long long curr = globalFuncation::GetMicrosecond();
+            // LOG4_ERROR("Load userinfo cost time %ld", curr - now);
+            LOG4_ERROR("listUserInfo size(%d) load from file cost time(%ld)", listUserInfo.size(), curr - now);
+            
+            while(globalFuncation::GetMicrosecond() - proceStartTime < 2*60*1000*1000)
+            {
+                sleep(1);
+            }
             //启动woker线程
             uv_async_t* async = new uv_async_t;
             async->data = &uvLoop[i];
@@ -479,6 +545,7 @@ int main(int argc, char* argv[])
 
             //创建定时器
             UTimerData uvTimerData;
+            uvTimerData.processNum = processNum; //进程数
             int perio = 5; //这里默认为5ms，意思是认为请求发出的循环周期为50us, 5ms内可以完成100个请求发出
             if(!g_cfg.Get("create_conn_timer_perio", perio))
             {
@@ -501,10 +568,18 @@ int main(int argc, char* argv[])
             uvTimerData.vUserInfo = &listUserInfo;//用户容器
             uvTimerData.uvLoop = &uvLoop[i];
 
+            //发起连接定时器
             uv_timer_t*  creatConnTimer= new uv_timer_t; 
             creatConnTimer->data = &uvTimerData;//挂接定时器用到的数据
             uv_timer_init(&uvLoop[i], creatConnTimer);
             uv_timer_start(creatConnTimer, uv_creatconn_timer_callback, 0, perio);//next loop 执行第一次, 并周期为perio ms
+            #if 0
+            //登录定时器
+            uv_timer_t*  loginTimer= new uv_timer_t; 
+            loginTimer->data = &uvTimerData;//挂接定时器用到的数据
+            uv_timer_init(&uvLoop[i], loginTimer);
+            uv_timer_start(loginTimer, uv_login_timer_callback, 2*1000, 50);//2s后执行第一次, 并周期为50ms；这时起码一个客户端上有50k连接了,50ms重复一次是为了校时，让客户端时钟走到同一秒
+            #endif 
         #if 0
             //关于统计也可以开启一个独立线程定时统计，这样就不影响主线程了
             uv_timer_t*  loginTaskStatisticsTimer= new uv_timer_t; 
