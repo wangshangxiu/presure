@@ -22,7 +22,7 @@
 #endif
 
 #define RB_SIZE 1024*16 
-#define TASK_THREAD_NUM 15
+#define TASK_THREAD_NUM 1
 #define USE_HEAD_LEN
 #define USE_MUTI_THREAD
 #define TCP_BUFFER_LEN 1024

@@ -47,7 +47,7 @@ void ImMessagePack::OnThread()
             {
                 delete pack.packBuf;//回收在socket线程分配出来的包内存
             } 
-            uv_async_send(m_asyn_send);
+            // uv_async_send(m_asyn_send);
         }
         else
         {
@@ -63,6 +63,8 @@ void ImMessagePack::CallDoTask(const ImPack& pack)
 
 void ImMessagePack::LoginReq(UserInfo& userInfo, MsgBody& msgBody)
 {
+    long long now  = globalFuncation::GetMicrosecond();
+    LOG4_WARN("-------start LoginReq, userId(%ld)---------",userInfo.userId);
     static const std::string& rsaKeyPath = "./conf/rsakey/public_key.pem";
     static RSA* rsaPublicKey = readRsaPublicKeyFromFile(const_cast<char*>(rsaKeyPath.c_str())); 
     {
@@ -72,7 +74,9 @@ void ImMessagePack::LoginReq(UserInfo& userInfo, MsgBody& msgBody)
         im_login::Login loginReq;
         im_login::RsaData rsaData;
         userInfo.aesKey = GetPassword(32);//临时aeskey
+        LOG4_WARN("-------start GenerateEcdhKeyPair, userId(%ld)---------",userInfo.userId);
         GenerateEcdhKeyPair(userInfo.ecdhKey[0], userInfo.ecdhKey[1]);//ecdh key pair
+        LOG4_WARN("-------end GenerateEcdhKeyPair, userId(%ld)---------",userInfo.userId);
         rsaData.set_userid(userInfo.userId);
         rsaData.set_ecdhpubkey(userInfo.ecdhKey[0]);
         rsaData.set_aeskey(userInfo.aesKey);
@@ -86,8 +90,10 @@ void ImMessagePack::LoginReq(UserInfo& userInfo, MsgBody& msgBody)
 
         std::string strRsaEncryptDest;
         std::string strAesEncryptDest;
+        LOG4_WARN("-------start Rsa2048Encrypt, userId(%ld)---------",userInfo.userId);
         if(Rsa2048Encrypt(rsaData.SerializeAsString(), strRsaEncryptDest, rsaPublicKey, false))
         {
+            LOG4_WARN("-------start Aes256Encrypt, userId(%ld)---------",userInfo.userId);
             if(Aes256Encrypt(aesData.SerializeAsString(), strAesEncryptDest, userInfo.aesKey))
             {
                 loginReq.set_rsadata(strRsaEncryptDest);
@@ -100,12 +106,15 @@ void ImMessagePack::LoginReq(UserInfo& userInfo, MsgBody& msgBody)
             {
                 LOG4_ERROR("Aes256Encrypt faild!");
             }
+            LOG4_WARN("-------start Aes256Encrypt, userId(%ld)---------",userInfo.userId);
         }
         else
         {
             LOG4_ERROR("Rsa2048Encrypt faild!");
         }
+        LOG4_WARN("-------start Rsa2048Encrypt, userId(%ld)---------",userInfo.userId);
     }
+    LOG4_WARN("-------end loginReq, userId(%ld) costime(%ld) ---------",userInfo.userId, globalFuncation::GetMicrosecond() -now);
 }
 
 void ImMessagePack::LoginRsp(const ImPack& pack)
@@ -143,11 +152,10 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
                 }
                 // pUserInfo->loginInfo.loginRspTime = globalFuncation::GetMicrosecond(); //设置用户登录返回时间， TaskTime
                 // long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.loginTime;
-                long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime; //（登录返回时间-TCP建连接时间）
+                long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.loginTime; //（登录返回时间-TCP建连接时间）
                 LOG4_INFO("userId(%lld) devId(%s) token(%s) loginRsp successfully at %ld, cost time %ld", 
                     pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime, costTime);
-                printf("userId(%lld) devId(%s) token(%s) loginRsp successfully at %ld, cost time %ld\n", 
-                    pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime, costTime);
+                LOG4_WARN("userId(%lld) Login at (%ld), rsp(%ld), status(%d)",pUserInfo->userId, pUserInfo->loginInfo.loginTime, pUserInfo->loginInfo.loginRspTime, status);
                 //登录成功后需要为当前用户开启心跳定时器，这个步骤要回到socket线程里设置
                 CustomEvent event;
                 event.handle = pack.stream; 
@@ -190,13 +198,10 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
     {
         im_login::LoginRsp loginRsp;
         loginRsp.ParseFromString(msgbody.body());
-        LOG4_ERROR("loginRsp failed: (%s)", loginRsp.DebugString().c_str());
-        // pUserInfo->loginInfo.loginRspTime = globalFuncation::GetMicrosecond();//登录返回并处理完的时间
-        long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime; //（登录返回时间-TCP建连接时间）
-        LOG4_ERROR("userId(%lld) devId(%s) token(%s) loginRsp failed at %ld, cost time %ld", 
+        long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.loginTime; //（登录返回时间-TCP建连接时间）
+        LOG4_INFO("userId(%lld) devId(%s) token(%s) loginRsp failed at %ld, cost time %ld", 
             pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime, costTime);
-        printf("userId(%lld) devId(%s) token(%s) loginRsp failed at %ld, cost time %ld\n", 
-            pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime, costTime);
+        LOG4_ERROR("userId(%lld) Login at (%ld), rsp(%ld), status(%d)",pUserInfo->userId, pUserInfo->loginInfo.loginTime, pUserInfo->loginInfo.loginRspTime, status);
         switch (status)//不同情况的登录返回处理
         {
             case 0:

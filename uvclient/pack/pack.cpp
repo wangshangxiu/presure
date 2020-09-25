@@ -88,7 +88,7 @@ void Pack::OnThread()
             {
                 delete pack.packBuf;//回收在socket线程分配出来的包内存
             } 
-            uv_async_send(m_asyn_send);
+            // uv_async_send(m_asyn_send);
         }
         else if(ret == -2)
         { 
@@ -114,7 +114,8 @@ void Pack::DoTask(const ImPack& pack)
 
 void Pack::SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool bEncryt)
 {
-    LOG4_INFO("-------SendMsg on stream(%p), strMsgBody len(%d), bEncrypt(%d)---------",handle, msgBody.size(), bEncryt);
+    long long now  = globalFuncation::GetMicrosecond();
+    LOG4_WARN("-------Start sendMsg on stream(%p), strMsgBody len(%d), bEncrypt(%d)---------",handle, msgBody.size(), bEncryt);
     uv_write_t *wReq = new uv_write_t;
     wReq->data = handle;
     uv_buf_t bufArray[2] = {{0, 0},{0, 0}};
@@ -197,4 +198,6 @@ void Pack::SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool
             req =nullptr;
         }
     });
+    LOG4_WARN("-------End sendMsg on stream(%p), strMsgBody len(%d), bEncrypt(%d) costime(%ld)---------",
+        handle, msgBody.size(), bEncryt, globalFuncation::GetMicrosecond() -now);
 }

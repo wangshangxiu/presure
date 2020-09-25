@@ -26,7 +26,7 @@
 #include "comm.h"
 
 // #define USE_CUSTOM_TIMEOUT_TIMER
-#define TCP_CONNNECT_TIME_OVER   15                     //30s
+#define TCP_CONNNECT_TIME_OVER   1                     //30s
 util::CJsonObject g_cfg;                                //配置
 // std::vector<UserInfo> listUserInfo;                     //模拟用户列表
 std::vector<std::string>  dstIpList;                    //IP列表
@@ -68,7 +68,15 @@ void uv_personal_conn_timeout_timer_callback(uv_timer_t* handle)
 //void (*uv_timer_cb)(uv_timer_t* handle);
 void uv_creatconn_timer_callback(uv_timer_t* handle) //周期为perio
 {
-    LOG4_INFO("-------uv_creatconn_timer_callback-------");
+    static int creatconn_timer_counter = 1;
+    static int t=0;
+    int t1=time(NULL);
+    if( t1 -t >= 1 )
+    {
+        t= t1;
+    LOG4_WARN("-------uv_creatconn_timer_callback, time(%ld), %d-------", globalFuncation::GetMicrosecond()/1000, creatconn_timer_counter);
+    }
+
     static int userInfoListCounter = 0;
     UTimerData* pUTimerData = (UTimerData*)handle->data;
     std::vector<UserInfo>& listUserInfo = *(std::vector<UserInfo>*)pUTimerData->vUserInfo;
@@ -107,6 +115,8 @@ void uv_creatconn_timer_callback(uv_timer_t* handle) //周期为perio
 #endif 
         userInfoListCounter++;
     }
+
+    creatconn_timer_counter++;
 
     if(userInfoListCounter >= (int)listUserInfo.size())
     {
@@ -509,7 +519,7 @@ int main(int argc, char* argv[])
             // LOG4_ERROR("Load userinfo cost time %ld", curr - now);
             LOG4_ERROR("listUserInfo size(%d) load from file cost time(%ld)", listUserInfo.size(), curr - now);
             
-            while(globalFuncation::GetMicrosecond() - proceStartTime < 2*60*1000*1000)
+            while(globalFuncation::GetMicrosecond() - proceStartTime < 2*60*1000*1000 && processNum > 1)
             {
                 sleep(1);
             }
@@ -521,6 +531,7 @@ int main(int argc, char* argv[])
             if(!g_cfg.Get("worker_thread_num", worker_thread_num) || (worker_thread_num > TASK_THREAD_NUM))
             {
                 worker_thread_num = TASK_THREAD_NUM; //限定业务线程数最大值
+                LOG4_WARN("worker_thread_num error");
             }
         #if 0
             for(int i = 0; i < worker_thread_num; i++)//要注意防止数组越界
@@ -587,8 +598,9 @@ int main(int argc, char* argv[])
             uv_timer_init(&uvLoop[i], loginTaskStatisticsTimer);
             uv_timer_start(loginTaskStatisticsTimer, uv_logintask_statistics_timer_callback, iConnTimeOut*2*1000, 1*1000);//2倍TCP_CONNNECT_TIME_OVER后执行第一次, 目的是充分等到每条TCP的超时定时器已经触发
         #endif
-            std::thread th(uv_logintask_statistics_independent_thread, &uvTimerData); //统计线程
-            th.detach();
+            // std::thread th(uv_logintask_statistics_independent_thread, &uvTimerData); //统计线程
+            // th.detach();
+
             // uv_timer_t*  checkTcpConnectTimeOutTimer= new uv_timer_t; 
             // checkTcpConnectTimeOutTimer->data = &uvTimerData;//挂接定时器用到的数据
             // uv_timer_init(&uvLoop[i], checkTcpConnectTimeOutTimer);

@@ -36,7 +36,7 @@ void on_connect(uv_connect_t* req, int status)
 
         pUserInfo->loginInfo.state = E_TCP_ESHTABLISHED;   //连接确立状态,TODO，应该打印建立连接的时间
         currConnNums++;//统计建立连接的数量，当满足login_qps的连接数后，可以划分一个区间
-        LOG4_ERROR("current enstablished connets nums %d", currConnNums);
+        LOG4_ERROR("current enstablished connets nums %d, userId(%ld)", currConnNums, pUserInfo->userId);
         // 登录 ,这个移到定时器里登录，好同一时间给出登录QPS
         MsgBody msgBody;
         ImMessagePack::LoginReq(*pUserInfo, msgBody);
