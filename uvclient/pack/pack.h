@@ -20,7 +20,7 @@ public:
     static void StartThread(void *p);                           //线程函数入口
     typedef void (Pack::*MemberFuntionPointer)(const ImPack& pack);
 
-    static void SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool bEncryt = true);//作为服务器时的发送函数
+    static bool SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool bEncryt = true);//作为服务器时的发送函数
 protected:
     virtual void OnThread();                                    //线程函数
     void DoTask(const ImPack& pack);                            //在线程函数里根据处理业务回调

@@ -40,7 +40,11 @@ void on_connect(uv_connect_t* req, int status)
         // 登录 ,这个移到定时器里登录，好同一时间给出登录QPS
         MsgBody msgBody;
         ImMessagePack::LoginReq(*pUserInfo, msgBody);
-        Pack::SendMsg(handle, 1001, msgBody.SerializeAsString(), false);
+        if(!Pack::SendMsg(handle, 1001, msgBody.SerializeAsString(), false))
+        {
+            LOG4_ERROR("userid(%ld) send cmd[%d] error on stream(%p)", pUserInfo->userId, 1001, handle);
+            return;
+        }
         pUserInfo->loginInfo.loginTime = globalFuncation::GetMicrosecond();//设置用户登录时间， [finConnectedTime, loginTime]
         LOG4_WARN("===userId(%ld) ready for login cost time (%ld) , handshark cost time(%d)", 
             pUserInfo->userId, pUserInfo->loginInfo.loginTime - pUserInfo->loginInfo.finConnectedTime,
@@ -48,18 +52,11 @@ void on_connect(uv_connect_t* req, int status)
     }
     else 
     {
-        //这里判断的原因在于开启了超时定时器，在这之前TCP和用户相关资源已经被回收，不能再回收一次
-        // auto iter = g_mapConnCache.find((uv_tcp_t*)handle); 
-        // if(iter != g_mapConnCache.end())
-        // {
         pUserInfo->loginInfo.state = E_TCP_TIMEOUT; //都暂认为是超时（目前只测连接速度，也只有超时之分）
         uv_close((uv_handle_t*)handle, close_cb);
         LOG4_ERROR("userId(%ld) handle(%p)'s status = %d, errorName(%s) , errorString(%s), handshark cost time(%d)" , 
             ((UserInfo*)handle->data)->userId,handle, status, uv_err_name(status), uv_strerror(status), 
             pUserInfo->loginInfo.finConnectedTime - pUserInfo->loginInfo.startConnectTime);
-        // }
-        // LOG4_ERROR("userId(%ld) handle(%p)'s status = %d, errorName(%s) , errorString(%s)" , 
-        //         ((UserInfo*)handle->data)->userId,handle, status, uv_err_name(status), uv_strerror(status));
     }
 
     if(req) free(req);//无论成功与否，把过程量uv_connect_t回收了，但如果成功连接已经保存起来
@@ -279,7 +276,7 @@ void write_cb(uv_write_t* req, int status)
     }
     else
     {
-        LOG4_INFO("write error on stream(%p), status= %d", req->data, status);
+        LOG4_ERROR("write error on stream(%p), status= %d", req->data, status);
     }
 
     if(req)
@@ -480,7 +477,11 @@ void uv_msg_timer_callback(uv_timer_t* handle)
         //发单聊消息
         MsgBody msgBody;
         ImMessagePack::MsgChatReq(*pUserInfo, msgBody);
-        Pack::SendMsg((uv_tcp_t*)stream, 4001, msgBody.SerializeAsString());
+        if(!Pack::SendMsg((uv_tcp_t*)stream, 4001, msgBody.SerializeAsString()))
+        {
+            LOG4_ERROR("userid(%ld) send cmd[%d] error on stream(%p)",pUserInfo->userId, 4001, stream);
+            return;
+        }
     }
 }
 

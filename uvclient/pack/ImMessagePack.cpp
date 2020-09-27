@@ -64,22 +64,15 @@ void ImMessagePack::CallDoTask(const ImPack& pack)
 void ImMessagePack::LoginReq(UserInfo& userInfo, MsgBody& msgBody)
 {
     long long now  = globalFuncation::GetMicrosecond();
-    LOG4_WARN("-------start LoginReq, userId(%ld)---------",userInfo.userId);
     static const std::string& rsaKeyPath = "./conf/rsakey/public_key.pem";
     static RSA* rsaPublicKey = readRsaPublicKeyFromFile(const_cast<char*>(rsaKeyPath.c_str())); 
-    LOG4_WARN("-------between LoginReq, userId(%ld)---------",userInfo.userId);
     {
-        // userInfo.loginInfo.loginTime = globalFuncation::GetMicrosecond();//设置用户登录时间， TaskTime
         LOG4_TRACE("userId(%ld) devId(%s) token(%s) logining at %ld ...", userInfo.userId, userInfo.devId.c_str(), userInfo.authToken.c_str(), userInfo.loginInfo.loginTime);
         // printf("userId(%ld) devId(%s) token(%s) logining at %ld ...\n", userInfo.userId, userInfo.devId.c_str(), userInfo.authToken.c_str(), userInfo.loginInfo.loginTime);
         im_login::Login loginReq;
         im_login::RsaData rsaData;
-        LOG4_WARN("-------start GetPassword, userId(%ld)---------",userInfo.userId);
         userInfo.aesKey = GetPassword(32);//临时aeskey
-        LOG4_WARN("-------end GetPassword, userId(%ld)---------",userInfo.userId);
-        LOG4_WARN("-------start GenerateEcdhKeyPair, userId(%ld)---------",userInfo.userId);
         GenerateEcdhKeyPair(userInfo.ecdhKey[0], userInfo.ecdhKey[1]);//ecdh key pair
-        LOG4_WARN("-------end GenerateEcdhKeyPair, userId(%ld)---------",userInfo.userId);
         rsaData.set_userid(userInfo.userId);
         rsaData.set_ecdhpubkey(userInfo.ecdhKey[0]);
         rsaData.set_aeskey(userInfo.aesKey);
@@ -93,10 +86,8 @@ void ImMessagePack::LoginReq(UserInfo& userInfo, MsgBody& msgBody)
 
         std::string strRsaEncryptDest;
         std::string strAesEncryptDest;
-        LOG4_WARN("-------start Rsa2048Encrypt, userId(%ld)---------",userInfo.userId);
         if(Rsa2048Encrypt(rsaData.SerializeAsString(), strRsaEncryptDest, rsaPublicKey, false))
         {
-            LOG4_WARN("-------start Aes256Encrypt, userId(%ld)---------",userInfo.userId);
             if(Aes256Encrypt(aesData.SerializeAsString(), strAesEncryptDest, userInfo.aesKey))
             {
                 loginReq.set_rsadata(strRsaEncryptDest);
@@ -109,13 +100,11 @@ void ImMessagePack::LoginReq(UserInfo& userInfo, MsgBody& msgBody)
             {
                 LOG4_ERROR("Aes256Encrypt faild!");
             }
-            LOG4_WARN("-------start Aes256Encrypt, userId(%ld)---------",userInfo.userId);
         }
         else
         {
             LOG4_ERROR("Rsa2048Encrypt faild!");
         }
-        LOG4_WARN("-------start Rsa2048Encrypt, userId(%ld)---------",userInfo.userId);
     }
     LOG4_WARN("-------end loginReq, userId(%ld) costime(%ld) ---------",userInfo.userId, globalFuncation::GetMicrosecond() -now);
 }
@@ -174,7 +163,7 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
                 else
                 {
                     LOG4_WARN("==========drop pack cmd(%d) in thread(%d)'s m_send_cq(%p), !!!", ntohl(*(unsigned int*)(pack.packBuf + 4)),  uv_thread_self(), m_send_cq);
-                    return;//m_send_cq满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
+                    return;//m_send_cq满了，pack被扔掉
                 }
 #else 
                 if(m_sendRb->push(&event, sizeof(event), m_sendMem) == 0)//pack放到rb_recv, 能放下则放下

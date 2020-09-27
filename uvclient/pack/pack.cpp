@@ -112,7 +112,7 @@ void Pack::DoTask(const ImPack& pack)
 }
 
 
-void Pack::SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool bEncryt)
+bool Pack::SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool bEncryt)
 {
     long long now  = globalFuncation::GetMicrosecond();
     LOG4_WARN("-------Start sendMsg on stream(%p), strMsgBody len(%d), bEncrypt(%d)---------",handle, msgBody.size(), bEncryt);
@@ -124,7 +124,7 @@ void Pack::SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool
     {
         LOG4_ERROR("stream(%p) no exist, maybe have recycle", handle);
         //需要再用时，连接不在了需要回收资源吗
-        return;
+        return false;
     }
     UserInfo *pUserInfo = (UserInfo*)handle->data;
     tagAppMsgHead head;
@@ -139,16 +139,19 @@ void Pack::SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool
                 if(!Aes256Encrypt(msgBody, data, strAesKey))
                 {
                     LOG4_ERROR("aes encrypt error, data(%s)", data.c_str());
+                    return false;
                 }
             }
             else
             {
-                LOG4_ERROR("strAesKey error, strAesKey(%s) size = %d", strAesKey.c_str(), (int)strAesKey.size());    
+                LOG4_ERROR("strAesKey error, strAesKey(%s) size = %d", strAesKey.c_str(), (int)strAesKey.size());
+                return false;
             }
         }
         else
         {
             LOG4_ERROR("there is no userInfo, pUserInfo (%p)", pUserInfo);
+            return false;
         }
 #ifdef USE_HEAD_LEN
         head.len = data.size() + sizeof(tagAppMsgHead);
@@ -182,14 +185,14 @@ void Pack::SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool
         bufArray[1].base = (char*)msgBody.c_str();
         bufArray[1].len = msgBody.size(); 
     }
-    uv_write(wReq, (uv_stream_t*)handle, bufArray, 2, [](uv_write_t* req, int status){
+    int ret = uv_write(wReq, (uv_stream_t*)handle, bufArray, 2, [](uv_write_t* req, int status){
         if(status ==0) 
         {
             LOG4_INFO("write successfully on stream(%p), req=%p",req->data, req);
         }
         else
         {
-            LOG4_INFO("write error on stream(%p), status= %d",req->data, status);
+            LOG4_ERROR("write error on stream(%p), status= %d",req->data, status);
         }
 
         if(req)
@@ -198,6 +201,12 @@ void Pack::SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool
             req =nullptr;
         }
     });
+    if(ret < 0) //<0代表出错了,uv_write总返回传入的数据长度，负值代表调用这个函数出错了，不能立刻发出去的会缓冲起来; 如果是uv_try_write，<0代表可能是UV_EAGAIN,因为不缓冲数据
+    {
+        LOG4_ERROR("call uv_write error");
+        return false;
+    }
+
     LOG4_WARN("-------End sendMsg on stream(%p), strMsgBody len(%d), bEncrypt(%d) costime(%ld)---------",
         handle, msgBody.size(), bEncryt, globalFuncation::GetMicrosecond() -now);
 }

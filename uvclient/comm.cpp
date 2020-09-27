@@ -84,21 +84,17 @@ bool LoadUserInfoFromCVSFile(std::vector<UserInfo>& userInfo, const std::string&
 	//				stringstream
 	// 				fstream
     // 读文件  
-
     std::ifstream inFile(strPath.c_str(), std::ios::in); //./data/id.cvs
     std::string lineStr;  
-    // std::vector<std::vector<std::string>> strArray;  
-	// istream& getline (istream& is, string& str, char delim);
-	// istream& getline (istream& is, string& str);
 	int lineCounter = 0;
-    while (std::getline(inFile, lineStr) && ((offset*smpleSize + smpleSize) > ++lineCounter))  
+    while (std::getline(inFile, lineStr) && ((offset*smpleSize + smpleSize) > lineCounter))  
     {  
-		// lineCounter++;
+		lineCounter++;
 		if(offset*smpleSize > lineCounter)
 		{
 			continue;
 		}
-        // 打印整行字符串  
+        // 打印整行字符串,这里很耗时的
         // std::cout << lineStr << " " << lineCounter << std::endl;  
         // 存成二维表结构  
         std::stringstream ss(lineStr);  
@@ -117,11 +113,7 @@ bool LoadUserInfoFromCVSFile(std::vector<UserInfo>& userInfo, const std::string&
         info.authToken = lineArray[2];//验证token，db有
         info.aesKey;//开始是自己，成功换成服务器生成的
         userInfo.push_back(info);
-		
-        // strArray.push_back(lineArray);  
     } 
-	// long long curr = globalFuncation::GetMicrosecond();
-	// LOG4_ERROR("Load userinfo cost time %ld", curr - now);
 	return true; 
 }
 #if 0
