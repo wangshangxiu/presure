@@ -91,9 +91,9 @@ bool LoadUserInfoFromCVSFile(std::vector<UserInfo>& userInfo, const std::string&
 	// istream& getline (istream& is, string& str, char delim);
 	// istream& getline (istream& is, string& str);
 	int lineCounter = 0;
-    while (std::getline(inFile, lineStr) && ((offset*smpleSize + smpleSize) > lineCounter))  
+    while (std::getline(inFile, lineStr) && ((offset*smpleSize + smpleSize) > ++lineCounter))  
     {  
-		lineCounter++;
+		// lineCounter++;
 		if(offset*smpleSize > lineCounter)
 		{
 			continue;

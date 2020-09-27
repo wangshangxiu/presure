@@ -351,8 +351,9 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
         {
             //本来还想算一次总样本的
             LOG4_INFO("uv_logintask_statistics_timer completed, close timer...");
-            LOG4_WARN("uv_logintask_statistics_timer completed, user0 loginTime(%ld), user%d loginTime(%ld), past(%ld)...",
-                listUserInfo[0].loginInfo.loginTime, listUserInfo.size(), listUserInfo[userInfoListCounter-1].loginInfo.loginTime, 
+            LOG4_WARN("%lld uv_logintask_statistics_timer completed, user0 loginTime(%ld), user%d loginTime(%ld), past(%ld)...",
+                listUserInfo[0].loginInfo.loginTime/(1000*1000), listUserInfo[0].loginInfo.loginTime, listUserInfo.size(), 
+                listUserInfo[userInfoListCounter-1].loginInfo.loginTime, 
                 listUserInfo[userInfoListCounter-1].loginInfo.loginTime - listUserInfo[0].loginInfo.loginTime);
             // uv_timer_stop(handle);
             userInfoListCounter = 0;

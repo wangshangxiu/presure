@@ -42,7 +42,9 @@ void on_connect(uv_connect_t* req, int status)
         ImMessagePack::LoginReq(*pUserInfo, msgBody);
         Pack::SendMsg(handle, 1001, msgBody.SerializeAsString(), false);
         pUserInfo->loginInfo.loginTime = globalFuncation::GetMicrosecond();//设置用户登录时间， [finConnectedTime, loginTime]
-        LOG4_WARN("===userId(%ld) ready for login cost time (%ld)", pUserInfo->userId, pUserInfo->loginInfo.loginTime - pUserInfo->loginInfo.finConnectedTime);
+        LOG4_WARN("===userId(%ld) ready for login cost time (%ld) , handshark cost time(%d)", 
+            pUserInfo->userId, pUserInfo->loginInfo.loginTime - pUserInfo->loginInfo.finConnectedTime,
+            pUserInfo->loginInfo.finConnectedTime - pUserInfo->loginInfo.startConnectTime);
     }
     else 
     {
@@ -52,8 +54,9 @@ void on_connect(uv_connect_t* req, int status)
         // {
         pUserInfo->loginInfo.state = E_TCP_TIMEOUT; //都暂认为是超时（目前只测连接速度，也只有超时之分）
         uv_close((uv_handle_t*)handle, close_cb);
-        LOG4_ERROR("userId(%ld) handle(%p)'s status = %d, errorName(%s) , errorString(%s)" , 
-            ((UserInfo*)handle->data)->userId,handle, status, uv_err_name(status), uv_strerror(status));
+        LOG4_ERROR("userId(%ld) handle(%p)'s status = %d, errorName(%s) , errorString(%s), handshark cost time(%d)" , 
+            ((UserInfo*)handle->data)->userId,handle, status, uv_err_name(status), uv_strerror(status), 
+            pUserInfo->loginInfo.finConnectedTime - pUserInfo->loginInfo.startConnectTime);
         // }
         // LOG4_ERROR("userId(%ld) handle(%p)'s status = %d, errorName(%s) , errorString(%s)" , 
         //         ((UserInfo*)handle->data)->userId,handle, status, uv_err_name(status), uv_strerror(status));
