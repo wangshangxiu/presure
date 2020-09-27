@@ -519,7 +519,7 @@ int main(int argc, char* argv[])
             // LOG4_ERROR("Load userinfo cost time %ld", curr - now);
             LOG4_ERROR("listUserInfo size(%d) load from file cost time(%ld)", listUserInfo.size(), curr - now);
             
-            while(globalFuncation::GetMicrosecond() - proceStartTime < 2*60*1000*1000 && processNum > 1)
+            while(globalFuncation::GetMicrosecond() - proceStartTime < 5*1000*1000 && processNum > 1)
             {
                 sleep(1);
             }
@@ -598,8 +598,8 @@ int main(int argc, char* argv[])
             uv_timer_init(&uvLoop[i], loginTaskStatisticsTimer);
             uv_timer_start(loginTaskStatisticsTimer, uv_logintask_statistics_timer_callback, iConnTimeOut*2*1000, 1*1000);//2倍TCP_CONNNECT_TIME_OVER后执行第一次, 目的是充分等到每条TCP的超时定时器已经触发
         #endif
-            // std::thread th(uv_logintask_statistics_independent_thread, &uvTimerData); //统计线程
-            // th.detach();
+            std::thread th(uv_logintask_statistics_independent_thread, &uvTimerData); //统计线程
+            th.detach();
 
             // uv_timer_t*  checkTcpConnectTimeOutTimer= new uv_timer_t; 
             // checkTcpConnectTimeOutTimer->data = &uvTimerData;//挂接定时器用到的数据

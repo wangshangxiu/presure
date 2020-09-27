@@ -88,7 +88,7 @@ void Pack::OnThread()
             {
                 delete pack.packBuf;//回收在socket线程分配出来的包内存
             } 
-            // uv_async_send(m_asyn_send);
+            uv_async_send(m_asyn_send);
         }
         else if(ret == -2)
         { 

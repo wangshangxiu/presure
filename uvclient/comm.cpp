@@ -99,7 +99,7 @@ bool LoadUserInfoFromCVSFile(std::vector<UserInfo>& userInfo, const std::string&
 			continue;
 		}
         // 打印整行字符串  
-        std::cout << lineStr << " " << lineCounter << std::endl;  
+        // std::cout << lineStr << " " << lineCounter << std::endl;  
         // 存成二维表结构  
         std::stringstream ss(lineStr);  
         std::string str;  

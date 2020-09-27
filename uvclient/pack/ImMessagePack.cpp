@@ -47,7 +47,7 @@ void ImMessagePack::OnThread()
             {
                 delete pack.packBuf;//回收在socket线程分配出来的包内存
             } 
-            // uv_async_send(m_asyn_send);
+            uv_async_send(m_asyn_send);
         }
         else
         {
@@ -67,13 +67,16 @@ void ImMessagePack::LoginReq(UserInfo& userInfo, MsgBody& msgBody)
     LOG4_WARN("-------start LoginReq, userId(%ld)---------",userInfo.userId);
     static const std::string& rsaKeyPath = "./conf/rsakey/public_key.pem";
     static RSA* rsaPublicKey = readRsaPublicKeyFromFile(const_cast<char*>(rsaKeyPath.c_str())); 
+    LOG4_WARN("-------between LoginReq, userId(%ld)---------",userInfo.userId);
     {
         // userInfo.loginInfo.loginTime = globalFuncation::GetMicrosecond();//设置用户登录时间， TaskTime
         LOG4_TRACE("userId(%ld) devId(%s) token(%s) logining at %ld ...", userInfo.userId, userInfo.devId.c_str(), userInfo.authToken.c_str(), userInfo.loginInfo.loginTime);
-        printf("userId(%ld) devId(%s) token(%s) logining at %ld ...\n", userInfo.userId, userInfo.devId.c_str(), userInfo.authToken.c_str(), userInfo.loginInfo.loginTime);
+        // printf("userId(%ld) devId(%s) token(%s) logining at %ld ...\n", userInfo.userId, userInfo.devId.c_str(), userInfo.authToken.c_str(), userInfo.loginInfo.loginTime);
         im_login::Login loginReq;
         im_login::RsaData rsaData;
+        LOG4_WARN("-------start GetPassword, userId(%ld)---------",userInfo.userId);
         userInfo.aesKey = GetPassword(32);//临时aeskey
+        LOG4_WARN("-------end GetPassword, userId(%ld)---------",userInfo.userId);
         LOG4_WARN("-------start GenerateEcdhKeyPair, userId(%ld)---------",userInfo.userId);
         GenerateEcdhKeyPair(userInfo.ecdhKey[0], userInfo.ecdhKey[1]);//ecdh key pair
         LOG4_WARN("-------end GenerateEcdhKeyPair, userId(%ld)---------",userInfo.userId);
