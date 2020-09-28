@@ -26,7 +26,7 @@
 #include "comm.h"
 
 // #define USE_CUSTOM_TIMEOUT_TIMER
-#define TCP_CONNNECT_TIME_OVER   1                     //30s
+#define TCP_CONNNECT_TIME_OVER   48                     //3+15+20s
 util::CJsonObject g_cfg;                                //配置
 // std::vector<UserInfo> listUserInfo;                     //模拟用户列表
 std::vector<std::string>  dstIpList;                    //IP列表
@@ -73,7 +73,7 @@ void uv_creatconn_timer_callback(uv_timer_t* handle) //周期为perio
     if( t1 -t >= 1 )
     {
         t= t1;
-    LOG4_WARN("-------uv_creatconn_timer_callback, time(%ld), %d-------", globalFuncation::GetMicrosecond()/1000, creatconn_timer_counter);
+        LOG4_WARN("-------uv_creatconn_timer_callback, time(%ld), %d-------", globalFuncation::GetMicrosecond()/1000, creatconn_timer_counter);
     }
 
     static int userInfoListCounter = 0;
@@ -127,7 +127,7 @@ void uv_creatconn_timer_callback(uv_timer_t* handle) //周期为perio
                 delete (uv_timer_t*)handle;
             }
         });
-    }
+    }    
 }
 
 //void (*uv_timer_cb)(uv_timer_t* handle);
@@ -190,8 +190,8 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
     std::vector<UserInfo*> vUserLoginInOneSecond;
     for(int i = 0; userInfoListCounter < (int)listUserInfo.size() && i < batch ; i++)
     {
-        // long long regionIndexTime = listUserInfo[userInfoListCounter].loginInfo.startConnectTime -  listUserInfo[regionIndex].loginInfo.startConnectTime;
-        long long regionIndexTime = listUserInfo[userInfoListCounter].loginInfo.loginTime -  listUserInfo[regionIndex].loginInfo.loginTime;
+        long long regionIndexTime = listUserInfo[userInfoListCounter].loginInfo.startConnectTime -  listUserInfo[regionIndex].loginInfo.startConnectTime;
+        // long long regionIndexTime = listUserInfo[userInfoListCounter].loginInfo.loginTime -  listUserInfo[regionIndex].loginInfo.loginTime;
         //把同1s内发出请求的用户作为一个区间来统计，客户端发出QPS是可以调节的，这个比较方式也总能准确的把一个个区间的QPS分离出来
         //其实batch就有这个效果，但比较方式能避免1s内客户端产生QPS的上限导致的问题
         if(regionIndexTime <= 1*1000*1000) 
@@ -222,7 +222,7 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
         if(pUserInfo->loginInfo.loginStatus == 0) //登录成功
         {
             loginSuccessfulCount++;
-            long long loginCostTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.loginTime;
+            long long loginCostTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime;
             loginTimeCostSet.insert(loginCostTime); //目的是想得到最大最小值
             tatolCostTime += loginCostTime;
         }
@@ -244,9 +244,9 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
     if(userInfoListCounter >= (int)listUserInfo.size())
     {
         //本来还想算一次总样本的
-        LOG4_WARN("uv_logintask_statistics_timer completed, user0 loginTime(%ld), user%d loginTime(%ld), past(%ld)...",
-            listUserInfo[0].loginInfo.loginTime, listUserInfo.size(), listUserInfo[userInfoListCounter-1].loginInfo.loginTime, 
-            listUserInfo[userInfoListCounter-1].loginInfo.loginTime - listUserInfo[0].loginInfo.loginTime);
+        LOG4_WARN("uv_logintask_statistics_timer completed, user0 loginTime(%ld), user%ld loginTime(%ld), past(%ld)...",
+            listUserInfo[0].loginInfo.startConnectTime, listUserInfo.size(), listUserInfo[userInfoListCounter-1].loginInfo.startConnectTime, 
+            listUserInfo[userInfoListCounter-1].loginInfo.startConnectTime - listUserInfo[0].loginInfo.startConnectTime);
         uv_timer_stop(handle);
         userInfoListCounter = 0;
         regionIndex = 0;
@@ -275,9 +275,9 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
         std::vector<UserInfo*> vUserLoginInOneSecond;
         for(int i = 0; userInfoListCounter < (int)listUserInfo.size() && i < batch ; i++)
         {
-            // long long regionIndexTime = listUserInfo[userInfoListCounter].loginInfo.startConnectTime -  listUserInfo[regionIndex].loginInfo.startConnectTime;
-            long long regionIndexTime = listUserInfo[userInfoListCounter].loginInfo.loginTime -  listUserInfo[regionIndex].loginInfo.loginTime;
-            //把同1s内发出请求的用户作为一个区间来统计，客户端发出QPS是可以调节的，这个比较方式也总能准确的把一个个区间的QPS分离出来
+            long long regionIndexTime = listUserInfo[userInfoListCounter].loginInfo.startConnectTime -  listUserInfo[regionIndex].loginInfo.startConnectTime;
+            // long long regionIndexTime = listUserInfo[userInfoListCounter].loginInfo.loginTime -  listUserInfo[regionIndex].loginInfo.loginTime;
+            //把同1s内发出(连接)请求的用户作为一个区间来统计，客户端发出QPS是可以调节的，这个比较方式也总能准确的把一个个区间的QPS分离出来
             //其实batch就有这个效果，但比较方式能避免1s内客户端产生QPS的上限导致的问题
             if(regionIndexTime <= 1*1000*1000) 
             {
@@ -307,8 +307,8 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
             if(pUserInfo->loginInfo.loginStatus == 0) //登录成功
             {
                 loginSuccessfulCount++;
-                // long long loginCostTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime;
-                long long loginCostTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.loginTime;
+                long long loginCostTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime;
+                // long long loginCostTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.loginTime;
                 loginTimeCostSet.insert(loginCostTime); //目的是想得到最大最小值
                 tatolCostTime += loginCostTime;
             }
@@ -331,10 +331,10 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
         {
             userInfoListCounter = 0;
             regionIndex = 0;
-            LOG4_WARN("%lld uv_logintask_statistics_timer completed, user0 loginTime(%ld), user%d loginTime(%ld), past(%ld)...",
-                listUserInfo[0].loginInfo.loginTime/(1000*1000), listUserInfo[0].loginInfo.loginTime, listUserInfo.size(), 
-                listUserInfo[userInfoListCounter-1].loginInfo.loginTime, 
-                listUserInfo[userInfoListCounter-1].loginInfo.loginTime - listUserInfo[0].loginInfo.loginTime);
+            LOG4_WARN("%lld uv_logintask_statistics_timer completed, user0 loginTime(%ld), user%ld loginTime(%ld), past(%ld)...",
+                listUserInfo[0].loginInfo.startConnectTime/(1000*1000), listUserInfo[0].loginInfo.startConnectTime, listUserInfo.size(), 
+                listUserInfo[userInfoListCounter-1].loginInfo.startConnectTime, 
+                listUserInfo[userInfoListCounter-1].loginInfo.startConnectTime - listUserInfo[0].loginInfo.startConnectTime);
             // uv_timer_stop(handle);
 
             // uv_close((uv_handle_t*)handle, [](uv_handle_t* handle){

@@ -143,12 +143,12 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
                     return;
                 }
                 // pUserInfo->loginInfo.loginRspTime = globalFuncation::GetMicrosecond(); //设置用户登录返回时间， TaskTime
-                // long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.loginTime;
-                long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.loginTime; //（登录返回时间-TCP建连接时间）
+                // long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime;
+                long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime; //（登录返回时间-TCP建连接时间）
                 LOG4_INFO("userId(%lld) devId(%s) token(%s) loginRsp successfully at %ld, cost time %ld", 
                     pUserInfo->userId, pUserInfo->devId.c_str(), pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginRspTime, costTime);
-                LOG4_WARN("%lld userId(%lld) Login at (%ld), rsp(%ld), status(%d)",pUserInfo->loginInfo.loginTime/(1000*1000), 
-                    pUserInfo->userId, pUserInfo->loginInfo.loginTime, pUserInfo->loginInfo.loginRspTime, status);
+                LOG4_WARN("%lld userId(%lld) Login at (%ld), rsp(%ld), status(%d)",pUserInfo->loginInfo.startConnectTime/(1000*1000), 
+                    pUserInfo->userId, pUserInfo->loginInfo.startConnectTime, pUserInfo->loginInfo.loginRspTime, status);
                 //登录成功后需要为当前用户开启心跳定时器，这个步骤要回到socket线程里设置
                 CustomEvent event;
                 event.handle = pack.stream; 
@@ -191,9 +191,9 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
     {
         im_login::LoginRsp loginRsp;
         loginRsp.ParseFromString(msgbody.body());
-        long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.loginTime; //（登录返回时间-TCP建连接时间）
-        LOG4_ERROR("%lld userId(%lld) Login at (%ld), rsp(%ld), status(%d)",pUserInfo->loginInfo.loginTime/(1000*1000), 
-            pUserInfo->userId, pUserInfo->loginInfo.loginTime, pUserInfo->loginInfo.loginRspTime, status);
+        long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.startConnectTime; //（登录返回时间-TCP建连接时间）
+        LOG4_ERROR("%lld userId(%lld) Login at (%ld), rsp(%ld), status(%d)",pUserInfo->loginInfo.startConnectTime/(1000*1000), 
+            pUserInfo->userId, pUserInfo->loginInfo.startConnectTime, pUserInfo->loginInfo.loginRspTime, status);
         // LOG4_ERROR()
         switch (status)//不同情况的登录返回处理
         {
