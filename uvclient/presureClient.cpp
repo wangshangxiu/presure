@@ -344,10 +344,10 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
         if(userInfoListCounter >= (int)listUserInfo.size())
         {
 
-            LOG4_WARN("%lld uv_logintask_statistics_timer completed, user1 loginTime(%ld), user%ld loginTime(%ld), past(%ld)...",
-                listUserInfo[0].loginInfo.startConnectTime/(1000*1000), listUserInfo[0].loginInfo.startConnectTime, listUserInfo.size(), 
-                listUserInfo[userInfoListCounter-1].loginInfo.startConnectTime, 
-                listUserInfo[userInfoListCounter-1].loginInfo.startConnectTime - listUserInfo[0].loginInfo.startConnectTime);
+            // LOG4_WARN("%lld uv_logintask_statistics_timer completed, user0 loginTime(%ld), user%ld loginTime(%ld), past(%ld)...",
+            //     listUserInfo[0].loginInfo.startConnectTime/(1000*1000), listUserInfo[0].loginInfo.startConnectTime, listUserInfo.size()-1, 
+            //     listUserInfo[listUserInfo.size()-1].loginInfo.startConnectTime, 
+            //     listUserInfo[listUserInfo.size()-1].loginInfo.startConnectTime - listUserInfo[0].loginInfo.startConnectTime);
             userInfoListCounter = 0;
             regionIndex = 0;
             // uv_timer_stop(handle);

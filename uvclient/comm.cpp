@@ -89,11 +89,12 @@ bool LoadUserInfoFromCVSFile(std::vector<UserInfo>& userInfo, const std::string&
 	int lineCounter = 0;
     while (std::getline(inFile, lineStr) && ((offset*smpleSize + smpleSize) > lineCounter))  
     {  
-		if(offset*smpleSize > lineCounter)
+		lineCounter++;
+		if(offset*smpleSize >= lineCounter)
 		{
 			continue;
 		}
-		lineCounter++;
+
         // 打印整行字符串,这里很耗时的
         // std::cout << lineStr << " " << lineCounter << std::endl;  
         // 存成二维表结构  
