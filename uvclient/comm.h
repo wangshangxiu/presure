@@ -168,6 +168,7 @@ typedef struct
     int connTimeout;//连接超时时间
     uv_loop_t* uvLoop = nullptr;
     int processNum = 0;
+    std::string strQPSLog;
 }UTimerData;
 
 namespace globalFuncation

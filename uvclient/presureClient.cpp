@@ -9,6 +9,7 @@
 #include <thread>
 #include <atomic> 
 #include <unistd.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -196,13 +197,13 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
         //其实batch就有这个效果，但比较方式能避免1s内客户端产生QPS的上限导致的问题
         if(regionIndexTime <= 1*1000*1000) 
         {
-            LOG4_INFO("=========userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
+            LOG4_INFO("userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
             vUserLoginInOneSecond.push_back(&listUserInfo[userInfoListCounter]);
             userInfoListCounter++;
         }
         else
         {
-            LOG4_INFO("=========userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
+            LOG4_INFO("userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
             regionIndex = userInfoListCounter; //下一区间的开始
             break; //最多一次循环batch次(客户端一个秒区间模拟的QPS值)，但如果遇到生产高QPS，耗时超出1s
         }
@@ -237,7 +238,7 @@ void uv_logintask_statistics_timer_callback(uv_timer_t* handle)
     }
 
     float average = tatolCostTime/(loginSuccessfulCount*1.0);
-    LOG4_WARN("-----------Time:%ld Login Tps (QPS(%d/s) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), error(%f), timeout(%d))-----------",
+    LOG4_WARN("Time:%ld Login Tps (QPS(%d/s) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), error(%f), timeout(%d))-----------",
         globalFuncation::GetMicrosecond(),  vUserLoginInOneSecond.size(), tatolCostTime, loginTimeCostSet.size()?*loginTimeCostSet.begin():0, 
         loginTimeCostSet.size()?*loginTimeCostSet.rbegin():0,  average, restError/(vUserLoginInOneSecond.size()*1.0) , loginTimeOverCount);
 
@@ -268,6 +269,13 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
     int timeout = pUTimerData->connTimeout;
     static int userInfoListCounter = 0;
     static int regionIndex = 0;     //同1s区间内第一个发出的请求
+    //qps统计结果输入到一个独立文件
+    FILE *m_fp = fopen(pUTimerData->strQPSLog.c_str(), "a+" );
+    if(!m_fp)
+    {
+        LOG4_ERROR("open file error, path=%s", pUTimerData->strQPSLog.c_str());
+        return;
+    }
     //计算周期内指定并发数的QPS
     sleep(timeout); //这个线程延时timeout才真正开始工作
     while(true)
@@ -281,13 +289,13 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
             //其实batch就有这个效果，但比较方式能避免1s内客户端产生QPS的上限导致的问题
             if(regionIndexTime <= 1*1000*1000) 
             {
-                LOG4_ERROR("=========userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
+                LOG4_ERROR("userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
                 vUserLoginInOneSecond.push_back(&listUserInfo[userInfoListCounter]);
                 userInfoListCounter++;
             }
             else
             {
-                LOG4_ERROR("=========userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
+                LOG4_ERROR("userId(%ld) start connect wait time(%ld)", listUserInfo[userInfoListCounter].userId, regionIndexTime);
                 regionIndex = userInfoListCounter; //下一区间的开始
                 break; //最多一次循环batch次(客户端一个秒区间模拟的QPS值)，但如果遇到生产高QPS，耗时超出1s
             }
@@ -318,14 +326,20 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
             }
             else
             {
-                restError++;
+                restError++; //这里的error包括登录有返回但logical失败，也包括没返回tcp被断开；logical失败可以是业务超时（能返回到客户端）和其它
             }
         }
 
+        static int round = 0;
         float average = tatolCostTime/(loginSuccessfulCount*1.0);
-        LOG4_WARN("-----------Time:%ld Login Tps (QPS(%d/s) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), error(%f), timeout(%d))-----------",
-            globalFuncation::GetMicrosecond(),  vUserLoginInOneSecond.size(), tatolCostTime, loginTimeCostSet.size()?*loginTimeCostSet.begin():0, 
-            loginTimeCostSet.size()?*loginTimeCostSet.rbegin():0,  average, restError/(vUserLoginInOneSecond.size()*1.0) , loginTimeOverCount);
+        LOG4_WARN("Time(%ld) Login Tps (QPS(%d/s) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), error(%d), timeout(%d))",
+            globalFuncation::GetMicrosecond()/(1000*1000),  vUserLoginInOneSecond.size(), tatolCostTime, loginTimeCostSet.size()?*loginTimeCostSet.begin():0, 
+            loginTimeCostSet.size()?*loginTimeCostSet.rbegin():0,  average, restError/*restError/(vUserLoginInOneSecond.size()*1.0)*/ , loginTimeOverCount);
+        //统计信息刷到独立文件 ./qps/presureClient_0.log
+        fprintf(m_fp,"%d: Time(%ld) Login Tps (QPS(%d/s) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), error(%d), timeout(%d))\n",
+            round++, globalFuncation::GetMicrosecond()/(1000*1000),  vUserLoginInOneSecond.size(), tatolCostTime, loginTimeCostSet.size()?*loginTimeCostSet.begin():0, 
+            loginTimeCostSet.size()?*loginTimeCostSet.rbegin():0,  average, restError/*restError/(vUserLoginInOneSecond.size()*1.0)*/ , loginTimeOverCount);
+        fflush(m_fp);
 
         if(userInfoListCounter >= (int)listUserInfo.size())
         {
@@ -342,6 +356,7 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
             //         delete (uv_timer_t*)handle;
             //     }
             // });
+            fclose(m_fp);//关闭文件
             return;
         }
         sleep(1); // 定时一秒
@@ -522,6 +537,7 @@ int main(int argc, char* argv[])
             uvTimerData.iBatch = batch;
             uvTimerData.vUserInfo = &listUserInfo;//用户容器
             uvTimerData.uvLoop = &uvLoop[i];
+            uvTimerData.strQPSLog = g_cfg("qps_log_path") + std::string("/") + getproctitle() + std::string(".log");
 
             //启动定时器，这个定时器用于发起连接
             uv_timer_t*  creatConnTimer= new uv_timer_t; 
