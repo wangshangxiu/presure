@@ -374,7 +374,7 @@ void uv_async_call(uv_async_t* handle)
     }
 }
 #endif
-#define FOR_ROUNDS 10
+#define FOR_ROUNDS 50
 void uv_async_call(uv_async_t* handle)
 {
     LOG4_WARN("-------uv_async_all, deal with (%d) bufs data---------", send_cq.size_approx());
