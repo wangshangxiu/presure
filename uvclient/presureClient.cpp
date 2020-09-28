@@ -326,7 +326,7 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
             }
             else
             {
-                restError++; //这里的error包括登录有返回但logical失败，也包括没返回tcp被断开；logical失败可以是业务超时（能返回到客户端）和其它
+                restError++; //这里的error包括登录有返回但logical失败，也包括没返回tcp被断开；logical失败可以是业务超时（能返回到客户端）和其它;超时包括Access,Login超时
             }
         }
 
