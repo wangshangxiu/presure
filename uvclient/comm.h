@@ -99,7 +99,7 @@ typedef struct
     long long loginTime = 0;        //登录时间
     long long loginRspTime = 0;     //登录返回时间
     int loginStatus = -1;           //0成功， 非0失败，主要是和登录协议的status一致
-    int state = 0;             //登录的状态， 包括发起tcp, 建立tcp, 登录中，登录返回
+    int state = 0;             //登录的状态， 包括发起tcp, 建立tcp, tcp超时
 }LoginInfo;
 
 typedef struct {

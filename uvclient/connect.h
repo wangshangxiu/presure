@@ -9,10 +9,12 @@
 #include "concurrentqueue.h"
 namespace uvconn
 {
+#if 0    
 extern void *p_recv_mem;                                           //writer:sockect线程；reader:业务线程  
 extern RingBuffer rb_recv;                                         //存放接收到的业务pack的lock-free缓冲
 extern std::vector<void*> p_send_mem;                              //writer:业务线程, reader:sockect线程
 extern std::vector<RingBuffer*> rb_send;                           //(RB_SIZE, false, false),多线程处理业务后要发包入缓冲，通知socket线程发送,有几个业务线程就有几个这样的
+#endif
 extern  moodycamel::ConcurrentQueue<ImPack> recv_cq;               //支持mutil-producer, mutil-comsumer的queque, 从通道来的
 extern  moodycamel::ConcurrentQueue<CustomEvent> send_cq;          //支持mutil-producer, mutil-comsumer的queque， 业务处理完投递给socket线程的
 extern std::map<uv_tcp_t*, void*> g_mapConnCache;                  //socket映射连接，连接与缓冲区关联，目的是不去占用uv_tcp_t.data
