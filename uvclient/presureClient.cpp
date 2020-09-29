@@ -336,7 +336,10 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
             globalFuncation::GetMicrosecond()/(1000*1000),  vUserLoginInOneSecond.size(), tatolCostTime, loginTimeCostSet.size()?*loginTimeCostSet.begin():0, 
             loginTimeCostSet.size()?*loginTimeCostSet.rbegin():0,  average, restError/*restError/(vUserLoginInOneSecond.size()*1.0)*/ , loginTimeOverCount);
         //统计信息刷到独立文件 ./qps/presureClient_0.log
-        fprintf(m_fp,"%d: Time(%ld) Login Tps (QPS(%d/s) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), error(%d), timeout(%d))\n",
+        // fprintf(m_fp,"%d: Time(%ld) Login Tps (QPS(%d/s) , tatolCostTime(%ld), min(%ld), max(%ld), average(%f), error(%d), timeout(%d))\n",
+        //     round++, globalFuncation::GetMicrosecond()/(1000*1000),  vUserLoginInOneSecond.size(), tatolCostTime, loginTimeCostSet.size()?*loginTimeCostSet.begin():0, 
+        //     loginTimeCostSet.size()?*loginTimeCostSet.rbegin():0,  average, restError/*restError/(vUserLoginInOneSecond.size()*1.0)*/ , loginTimeOverCount);
+        fprintf(m_fp,"%d|%ld|%d|%ld|%ld|%ld|%f|%d|%d\n",
             round++, globalFuncation::GetMicrosecond()/(1000*1000),  vUserLoginInOneSecond.size(), tatolCostTime, loginTimeCostSet.size()?*loginTimeCostSet.begin():0, 
             loginTimeCostSet.size()?*loginTimeCostSet.rbegin():0,  average, restError/*restError/(vUserLoginInOneSecond.size()*1.0)*/ , loginTimeOverCount);
         fflush(m_fp);
