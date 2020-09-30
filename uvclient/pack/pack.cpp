@@ -207,6 +207,9 @@ bool Pack::SendMsg(uv_tcp_t* handle, int icmd , const std::string& msgBody, bool
         return false;
     }
 
+
     LOG4_WARN("-------End sendMsg on stream(%p), strMsgBody len(%d), bEncrypt(%d) costime(%ld)---------",
         handle, msgBody.size(), bEncryt, globalFuncation::GetMicrosecond() -now);
+    
+    return true;
 }
