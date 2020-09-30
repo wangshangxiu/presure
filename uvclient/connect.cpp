@@ -166,10 +166,17 @@ void echo_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
                             }
                             else
                             {
-                                LOG4_WARN("==========drop pack cmd(%d) on stream(%p)!!!", ntohl(*(unsigned int*)(pack.packBuf + 4)), pack.stream);
-                                pack.packBuf = nullptr; //理论缓冲满了，数据没放进去
-                                delete []cbuf;//recv_cq 满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
-                                return;
+                                if(recv_cq.enqueue(pack) == true)
+                                {
+                                    LOG4_INFO("retry push pack of stream(%p) to ringbuffer, pack.packBuf(%p), pack.len(%d), recv_cq(%p)",pack.stream,  pack.packBuf, pack.len, &recv_cq);
+                                }
+                                else
+                                {
+                                    LOG4_WARN("==========drop pack cmd(%d) on stream(%p)!!!", ntohl(*(unsigned int*)(pack.packBuf + 4)), pack.stream);
+                                    pack.packBuf = nullptr; //理论缓冲满了，数据没放进去
+                                    delete []cbuf;//recv_cq 满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
+                                    return;
+                                }
                             }       
                             leftLen -= packLen;
                             offset += packLen;
@@ -247,10 +254,17 @@ void on_parse_pack(const uv_stream_t* stream)
                     }
                     else
                     {
-                        LOG4_WARN("==========drop pack cmd(%d) on stream(%p)!!!", ntohl(*(unsigned int*)(pack.packBuf + 4)), pack.stream);
-                        pack.packBuf = nullptr; //理论缓冲满了，数据没放进去
-                        delete []cbuf;//recv_cq 满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
-                        return;
+                        if(recv_cq.enqueue(pack) == true)
+                        {
+                            LOG4_INFO("retry push pack of stream(%p) to ringbuffer, pack.packBuf(%p), pack.len(%d), recv_cq(%p)",pack.stream,  pack.packBuf, pack.len, &recv_cq);
+                        }
+                        else
+                        {
+                            LOG4_WARN("==========drop pack cmd(%d) on stream(%p)!!!", ntohl(*(unsigned int*)(pack.packBuf + 4)), pack.stream);
+                            pack.packBuf = nullptr; //理论缓冲满了，数据没放进去
+                            delete []cbuf;//recv_cq 满了，pack被扔掉了,后期可以考虑peek,但要配上remove,不可能在这里处理业务吧
+                            return;
+                        }
                     }       
                 }
                 else
