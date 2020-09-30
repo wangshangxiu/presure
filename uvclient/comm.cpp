@@ -16,7 +16,8 @@ long long GetSecond()
 
 bool LoadConfig(util::CJsonObject& oConf, const char* strConfFile)
 {
-    std::ifstream fin(strConfFile);
+    // std::fstream fin(strConfFile);
+	std::fstream fin(strConfFile,std::ios::in|std::ios::out); //可读写
 	//配置信息输入流
 	if (fin.good())
 	{
@@ -30,6 +31,22 @@ bool LoadConfig(util::CJsonObject& oConf, const char* strConfFile)
 			ssContent.str("");
 			fin.close();
 			return false;
+		}
+		else
+		{
+			util::CJsonObject newConf = oConf;
+			int oldLoginSeq = 0;
+			if(newConf.Get("login_seq", oldLoginSeq))
+			{
+				newConf.Replace("login_seq", ++oldLoginSeq);
+			}
+			else
+			{
+				newConf.Add("login_seq", 1000);//配置文件没有，暂时定位1000开始好了
+			}
+			fin.seekp(std::ios::beg); //回到文件头部
+			fin.clear();//清空源文件
+			fin << newConf.ToString();
 		}
 		ssContent.str("");
 		fin.close();

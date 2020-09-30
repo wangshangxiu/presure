@@ -160,22 +160,25 @@ typedef struct {
     }
 }UserInfo;
 
+//定时器函数的handle.data
 typedef struct 
 {
-    std::vector<UserInfo> *vUserInfo;
-    int iBatch;//周期内发起的并发数
-    int iPerio;//周期
-    int connTimeout;//连接超时时间
-    uv_loop_t* uvLoop = nullptr;
-    int processNum = 0;
-    std::string strQPSLog;
-    int loginQps = 0;
-    int loginQpsPerio = 0;
+    std::vector<UserInfo> *vUserInfo; //用户列表
+    int iBatch;                   //周期内发起的并发数
+    int iPerio;                  //定时发起TCP的周期
+    int connTimeout;             //连接超时的周期
+    uv_loop_t* uvLoop = nullptr; //事件循环指针
+    int processNum = 0;         //创建的子进程数
+    std::string strQPSLog;      //qps结果文件输出目录
+    int loginQps = 0;           //每秒qps
+    int loginQpsPerio = 0;      //loginqps发出间隔, 1/毫秒，把一秒的qps拆成多次
+    int loginSeq = 0;          //登录seq，每次启动需要从配置读，++回写，免得每次都要重置redis缓冲
 }UTimerData;
 
 namespace globalFuncation
 {
 long long GetMicrosecond();
+//加载配置，顺便需要回写配置的一起操作
 bool LoadConfig(util::CJsonObject& oConf, const char* strConfFile);
 //解析CSV比JSON要快多了
 bool LoadUserInfoFromJsonFile(std::vector<UserInfo>& userInfo, const std::string& strPath);

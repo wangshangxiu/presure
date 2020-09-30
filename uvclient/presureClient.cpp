@@ -131,6 +131,7 @@ void uv_creatconn_timer_callback(uv_timer_t* handle) //周期为perio
     }    
 }
 
+//每秒的登录QPS定时器函数
 //void (*uv_timer_cb)(uv_timer_t* handle);
 void uv_login_timer_callback(uv_timer_t* handle) //周期为perio
 {
@@ -144,9 +145,11 @@ void uv_login_timer_callback(uv_timer_t* handle) //周期为perio
     // int processNum = pUTimerData->processNum;
     int loginQps = pUTimerData->loginQps;
     int loginQpsPerio = pUTimerData->loginQpsPerio;
+    int loginSeq = pUTimerData->loginSeq;//配置读到的loginseq
     // for(auto iter = listUserInfo.begin(); iter != listUserInfo.end() && batch <; iter++)
     for(int i = 0;  userInfoListCounter < (int)listUserInfo.size() && i < loginQps/(1000/loginQpsPerio) ; i++)
     {
+        listUserInfo[userInfoListCounter].loginSeq = loginSeq; //配置读到的loginseq
         if(listUserInfo[userInfoListCounter].loginInfo.state == E_TCP_ESHTABLISHED)
         {
             long long now = globalFuncation::GetMicrosecond();
@@ -526,7 +529,7 @@ int main(int argc, char* argv[])
                 std::thread th(&Pack::StartThread, objTestImMsg);
                 th.detach();
             }
-            //创建定时器
+            //创建定时器的用户数据handl.data
             UTimerData uvTimerData;
             uvTimerData.processNum = processNum; //进程数
             int perio = 5;                       //这里默认为5ms，意思是认为请求发出的循环周期为50us, 5ms内可以完成100个请求发出
@@ -555,6 +558,8 @@ int main(int argc, char* argv[])
             {
                 loginQpsPerio = 10;
             }
+            int loginSeq = 10000;
+            g_cfg.Get("login_seq", loginSeq);
 
             uvTimerData.connTimeout = iConnTimeOut;
             uvTimerData.iBatch = batch;
@@ -563,6 +568,7 @@ int main(int argc, char* argv[])
             uvTimerData.strQPSLog = g_cfg("qps_log_path") + std::string("/") + getproctitle() + std::string(".log");
             uvTimerData.loginQps = loginQps;
             uvTimerData.loginQpsPerio = loginQpsPerio;
+            uvTimerData.loginSeq = loginSeq; //配置总是更新最新的loginseq
 
             //启动定时器，这个定时器用于发起连接
             uv_timer_t*  creatConnTimer= new uv_timer_t; 
