@@ -169,6 +169,8 @@ typedef struct
     uv_loop_t* uvLoop = nullptr;
     int processNum = 0;
     std::string strQPSLog;
+    int loginQps = 0;
+    int loginQpsPerio = 0;
 }UTimerData;
 
 namespace globalFuncation

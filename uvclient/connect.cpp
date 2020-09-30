@@ -40,6 +40,7 @@ void on_connect(uv_connect_t* req, int status)
         currConnNums++;//统计建立连接的数量，当满足login_qps的连接数后，可以划分一个区间
         LOG4_ERROR("current enstablished connets nums %d, userId(%ld)", currConnNums, pUserInfo->userId);
         // 登录 ,这个移到定时器里登录，好同一时间给出登录QPS
+#if 0
         MsgBody msgBody;
         ImMessagePack::LoginReq(*pUserInfo, msgBody);
         if(!Pack::SendMsg(handle, 1001, msgBody.SerializeAsString(), false))
@@ -51,6 +52,7 @@ void on_connect(uv_connect_t* req, int status)
         LOG4_WARN("userId(%ld) ready for login cost time (%ld) , handshark cost time(%d)", 
             pUserInfo->userId, pUserInfo->loginInfo.loginTime - pUserInfo->loginInfo.finConnectedTime,
             pUserInfo->loginInfo.finConnectedTime - pUserInfo->loginInfo.startConnectTime);
+#endif            
     }
     else 
     {

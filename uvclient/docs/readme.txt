@@ -44,6 +44,8 @@ cat set_0_redis_data.txt | redis-cli -h 10.3.0.65 -p 19000 -a rxLt2bdQAyf9E  --p
 在工程目录下运行程序，即可建立多连接, 并且能登录，保持在线
 [root@im2 uvclient]# ./presureClient iplist port cfgfile (示例：./presureClient 192.168.11.70:192.168.11.72:192.168.11.73:192.168.11.74:192.168.11.75 27010 ./conf/client.conf)
 
+-----------------在多个文件种分组求和QPS---------
+awk -F"|" '{a[$2]+=$3;b[$2]+=$8;c[$2]+=$9}END{for(i in a)print i, a[i],b[i],c[i]}' qps/presureClient_* | sort -k1n
 
 
 
