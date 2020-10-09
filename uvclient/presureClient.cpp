@@ -83,10 +83,12 @@ void uv_creatconn_timer_callback(uv_timer_t* handle) //周期为perio
     int batch = pUTimerData->iBatch;
     int timeout = pUTimerData->connTimeout;
     uv_loop_t* uvLoop = (uv_loop_t*)pUTimerData->uvLoop;
+    int loginSeq = pUTimerData->loginSeq;
     for(int i = 0;  userInfoListCounter < (int)listUserInfo.size() && i < batch ; i++)
     {
         uv_tcp_t* utcp = (uv_tcp_t*)malloc(sizeof(uv_tcp_t));
         uv_tcp_init(uvLoop, utcp);
+        listUserInfo[userInfoListCounter].loginSeq = loginSeq;
         utcp->data = &listUserInfo[userInfoListCounter];//全局的<连接，用户>映射
         listUserInfo[userInfoListCounter].conn = utcp;//业务层的用户架构关联网络层的连接，指针
         uv_connect_t* uconn = (uv_connect_t*)malloc(sizeof(uv_connect_t));
@@ -147,7 +149,7 @@ void uv_login_timer_callback(uv_timer_t* handle) //周期为perio
     int loginQpsPerio = pUTimerData->loginQpsPerio;
     int loginSeq = pUTimerData->loginSeq;//配置读到的loginseq
     // for(auto iter = listUserInfo.begin(); iter != listUserInfo.end() && batch <; iter++)
-    for(int i = 0;  userInfoListCounter < (int)listUserInfo.size() && i < loginQps/(1000/loginQpsPerio) ; i++)
+    for(int i = 0;  userInfoListCounter < (int)listUserInfo.size() && i < loginQps; i++)
     {
         listUserInfo[userInfoListCounter].loginSeq = loginSeq; //配置读到的loginseq
         if(listUserInfo[userInfoListCounter].loginInfo.state == E_TCP_ESHTABLISHED)
@@ -276,7 +278,7 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
     int batch = pUTimerData->iBatch*(1000/perio);//并发数, 但batch很大时,可能并不能在一秒内全部发出,所以在下边统计时需要判断batch批次内同1s发出的
     int loginQps = pUTimerData->loginQps;
     int loginQpsPerio = pUTimerData->loginQpsPerio;
-    int round = loginQps/(1000/loginQpsPerio);
+    // int round = loginQps/(1000/loginQpsPerio);
     int timeout = pUTimerData->connTimeout;
     static int userInfoListCounter = 0;
     static int regionIndex = 0;     //同1s区间内第一个发出的请求
@@ -292,7 +294,7 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
     while(true)
     {
         std::vector<UserInfo*> vUserLoginInOneSecond;
-        for(int i = 0; userInfoListCounter < (int)listUserInfo.size() && i < loginQps ; i++)
+        for(int i = 0; userInfoListCounter < (int)listUserInfo.size() && i < batch ; i++)
         {
             // long long regionIndexTime = listUserInfo[userInfoListCounter].loginInfo.startConnectTime -  listUserInfo[regionIndex].loginInfo.startConnectTime;
             long long regionIndexTime = listUserInfo[userInfoListCounter].loginInfo.loginTime -  listUserInfo[regionIndex].loginInfo.loginTime;
@@ -567,7 +569,7 @@ int main(int argc, char* argv[])
             uvTimerData.uvLoop = &uvLoop[i];
             uvTimerData.strQPSLog = g_cfg("qps_log_path") + std::string("/") + getproctitle() + std::string(".log");
             uvTimerData.loginQps = loginQps;
-            uvTimerData.loginQpsPerio = loginQpsPerio;
+            uvTimerData.loginQpsPerio = perio;
             uvTimerData.loginSeq = loginSeq; //配置总是更新最新的loginseq
 
             //启动定时器，这个定时器用于发起连接
@@ -575,13 +577,13 @@ int main(int argc, char* argv[])
             creatConnTimer->data = &uvTimerData;//挂接定时器用到的数据
             uv_timer_init(&uvLoop[i], creatConnTimer);
             uv_timer_start(creatConnTimer, uv_creatconn_timer_callback, 0, perio);//next loop 执行第一次, 并周期为perio ms
-
+#if 0
             //登录定时器
             uv_timer_t*  loginTimer= new uv_timer_t; 
             loginTimer->data = &uvTimerData;//挂接定时器用到的数据
             uv_timer_init(&uvLoop[i], loginTimer);
-            uv_timer_start(loginTimer, uv_login_timer_callback, 10*1000, loginQpsPerio);//10s后执行第一次, 并周期为100ms；目的是等300K的TCP都建立好，但剩下的50s内登录要能发出去。
-#if 0
+            uv_timer_start(loginTimer, uv_login_timer_callback, 20*1000, 10);//20s后执行第一次,因为TCP最大超时3+15=18s;10ms作为一个周期，一个周期连续发起100个，耗时120ms,剩下时间给其它任务处理
+
             //关于统计也可以开启一个独立线程定时统计，这样就不影响主线程了
             uv_timer_t*  loginTaskStatisticsTimer= new uv_timer_t; 
             loginTaskStatisticsTimer->data = &uvTimerData;//挂接定时器用到的数据
@@ -604,6 +606,10 @@ int main(int argc, char* argv[])
 
             //事件循环
             return uv_run(&uvLoop[i], UV_RUN_DEFAULT);
+            // for(int i = 0; i < worker_thread_num; i++)//要注意防止数组越界
+            // {
+
+            // }
         }
         else //父进程
         {
