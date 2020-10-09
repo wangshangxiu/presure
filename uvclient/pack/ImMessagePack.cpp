@@ -51,7 +51,7 @@ void ImMessagePack::OnThread()
         }
         else
         {
-            usleep(1000);//缓冲为空，业务线程可以休眠1ms
+            usleep(1000*1000);//缓冲为空，业务线程可以休眠1ms
         }
     }
 }
@@ -192,8 +192,8 @@ void ImMessagePack::LoginRsp(const ImPack& pack)
         im_login::LoginRsp loginRsp;
         loginRsp.ParseFromString(msgbody.body());
         long long costTime = pUserInfo->loginInfo.loginRspTime - pUserInfo->loginInfo.loginTime; //（登录返回时间-TCP建连接时间）
-        LOG4_ERROR("%lld userId(%lld) Login at (%ld), rsp(%ld), status(%d)",pUserInfo->loginInfo.loginTime/(1000*1000), 
-            pUserInfo->userId, pUserInfo->loginInfo.loginTime, pUserInfo->loginInfo.loginRspTime, status);
+        LOG4_ERROR("%lld userId(%lld) token(%s) Login at (%ld), rsp(%ld), status(%d)",pUserInfo->loginInfo.loginTime/(1000*1000), 
+            pUserInfo->userId, pUserInfo->authToken.c_str(), pUserInfo->loginInfo.loginTime, pUserInfo->loginInfo.loginRspTime, status);
         // LOG4_ERROR()
         switch (status)//不同情况的登录返回处理
         {

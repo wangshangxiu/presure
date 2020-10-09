@@ -313,7 +313,7 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
                 break; //最多一次循环batch次(客户端一个秒区间模拟的QPS值)，但如果遇到生产高QPS，耗时超出1s
             }
         }
-        if(vUserLoginInOneSecond.size() == loginQps) //如果这batch样本都在1s内，主动移到下个区间
+        if(vUserLoginInOneSecond.size() == batch) //如果这batch样本都在1s内，主动移到下个区间
         {
             regionIndex = userInfoListCounter; 
         }
@@ -420,6 +420,29 @@ void uv_logintask_statistics_independent_thread(UTimerData* uvTimerData)
 //         });
 //     }
 // }
+//回收TCP资源,关闭loop
+void signalCallBack(uv_signal_t* handle, int signum)
+{
+    LOG4_WARN("recv signal %d in %p", signum, handle);
+    std::vector<UserInfo>& listUserInfo = *(std::vector<UserInfo>*)handle->data;
+    for(auto& userInfo: listUserInfo)
+    {
+        if(userInfo.conn)
+        {
+            uv_close((uv_handle_t*)userInfo.conn, uvconn::close_cb);
+        }
+    }
+    uv_stop(handle->loop);
+    exit(0);
+}
+
+void AddSignalCallBack(uv_loop_t* loop, int signum, void* args)
+{
+    uv_signal_t signal;
+    signal.data = args;
+    uv_signal_init(loop, &signal);
+    uv_signal_start(&signal, signalCallBack, signum);
+}
 
 int main(int argc, char* argv[])
 {
@@ -603,7 +626,9 @@ int main(int argc, char* argv[])
             // msgTimer->data = &uvTimerData;
             // uv_timer_init(&uvLoop[i], msgTimer);
             // uv_timer_start(msgTimer, uv_msg_timer_callback, 1*1000, 1*1000);//1s后启动, 并周期为1s,消息发送定时器
-
+            //绑定信号回调
+            //void (*uv_signal_cb)(uv_signal_t* handle, int signum);
+            // AddSignalCallBack(&uvLoop[i], SIGINT, &listUserInfo);
             //事件循环
             return uv_run(&uvLoop[i], UV_RUN_DEFAULT);
             // for(int i = 0; i < worker_thread_num; i++)//要注意防止数组越界
@@ -617,9 +642,12 @@ int main(int argc, char* argv[])
         }
     }
 
-    for(int i=0;i< processNum ;i++)
+    for(int i=0; i< processNum ;i++)
 	{
 		waitpid(pid[i],NULL,0);
 	}
+
+    delete[] uvLoop;
+    uvLoop = nullptr;
 }
 
