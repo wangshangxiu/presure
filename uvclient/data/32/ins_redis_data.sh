@@ -6,3 +6,6 @@ cat ins_redis_data.txt.ad | redis-cli -h 10.3.0.65 -p 19000 -a rxLt2bdQAyf9E  --
 cat ins_redis_data.txt.ae | redis-cli -h 10.3.0.65 -p 19000 -a rxLt2bdQAyf9E  --pipe
 cat ins_redis_data.txt.af | redis-cli -h 10.3.0.65 -p 19000 -a rxLt2bdQAyf9E  --pipe
 cat ins_redis_data.txt.ag | redis-cli -h 10.3.0.65 -p 19000 -a rxLt2bdQAyf9E  --pipe
+cat ins_redis_data.txt.ah | redis-cli -h 10.3.0.65 -p 19000 -a rxLt2bdQAyf9E  --pipe
+cat ins_redis_data.txt.ai | redis-cli -h 10.3.0.65 -p 19000 -a rxLt2bdQAyf9E  --pipe
+cat ins_redis_data.txt.aj | redis-cli -h 10.3.0.65 -p 19000 -a rxLt2bdQAyf9E  --pipe

@@ -40,6 +40,7 @@ ins_redis_data.txt: //hset 1:1:im:token::deviceid:5EDF8352-7BB2-4A8A-9BE4-812F1F
 set_0_redis_data.txt://hset 1:2:im:status:userid:1275006717478846466 loginseq:5EDF8352-7BB2-4A8A-9BE4-812F1F053C2B 0 //把登录态的loginSeq归零,方便下次登录，应对程序没对loginseq++的情况
 //通过这种方式使用上边两个和redis数据相关的文件
 cat set_0_redis_data.txt | redis-cli -h 10.3.0.65 -p 19000 -a rxLt2bdQAyf9E  --pipe  （这回管道操作redis)
+
 --------运行工具--------
 在工程目录下运行程序，即可建立多连接, 并且能登录，保持在线
 [root@im2 uvclient]# ./presureClient iplist port cfgfile (示例：./presureClient 192.168.11.70:192.168.11.72:192.168.11.73:192.168.11.74:192.168.11.75 27010 ./conf/client.conf)
